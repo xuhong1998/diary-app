@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useModuleStore } from '@/stores/modules'
 import { useRoute } from 'vue-router'
 
 const moduleStore = useModuleStore()
 const route = useRoute()
+const sidebarOpen = ref(false)
 
 const navItems = computed(() => {
   const items = [
@@ -20,24 +21,47 @@ const navItems = computed(() => {
   items.push({ to: '/settings', icon: '⚙️', label: '设置' })
   return items
 })
+
+watch(() => route.path, () => {
+  sidebarOpen.value = false
+})
 </script>
 
 <template>
-  <div id="app-container">
+  <div id="app-container" :class="{ 'sidebar-open': sidebarOpen }">
+    <!-- 顶部栏 -->
+    <header class="top-bar">
+      <button class="menu-btn" @click="sidebarOpen = !sidebarOpen">
+        <span class="hamburger"></span>
+      </button>
+      <span class="top-title">{{ navItems.find(i => i.to === route.path)?.label || '日记' }}</span>
+    </header>
+
+    <!-- 遮罩 -->
+    <div v-if="sidebarOpen" class="overlay" @click="sidebarOpen = false"></div>
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
+      <div class="sidebar-header">
+        <span class="sidebar-title">📝 我的日记</span>
+      </div>
+      <nav class="sidebar-nav">
+        <router-link
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          class="sidebar-item"
+          :class="{ active: route.path === item.to }"
+        >
+          <span class="sidebar-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </router-link>
+      </nav>
+    </aside>
+
+    <!-- 主内容 -->
     <main class="main-content">
       <router-view />
     </main>
-    <nav class="bottom-nav">
-      <router-link
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to"
-        class="nav-item"
-        :class="{ active: route.path === item.to }"
-      >
-        <span class="nav-icon">{{ item.icon }}</span>
-        <span class="nav-label">{{ item.label }}</span>
-      </router-link>
-    </nav>
   </div>
 </template>

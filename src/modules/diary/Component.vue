@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useDiaryStore } from '@/stores/diary'
+import { useDiaryStore, nowTime } from '@/stores/diary'
 import type { Period } from '@/types'
 
 const store = useDiaryStore()
 const inputText = ref('')
+const inputTime = ref(nowTime())
 const editingReflection = ref(false)
 const reflectionText = ref('')
+const editingId = ref<string | null>(null)
+const editTime = ref('')
+const editText = ref('')
 
 const periodLabels: Record<Period, string> = {
   morning: '上午',
@@ -22,8 +26,28 @@ onMounted(() => {
 
 async function submit() {
   if (!inputText.value.trim()) return
-  await store.addRecord(inputText.value)
+  await store.addRecord(inputText.value, inputTime.value)
   inputText.value = ''
+  inputTime.value = nowTime()
+}
+
+function startEdit(id: string, time: string, text: string) {
+  editingId.value = id
+  editTime.value = time
+  editText.value = text
+}
+
+function cancelEdit() {
+  editingId.value = null
+}
+
+async function saveEdit() {
+  if (!editingId.value || !editText.value.trim()) return
+  await store.updateRecord(editingId.value, {
+    time: editTime.value,
+    text: editText.value,
+  })
+  editingId.value = null
 }
 
 function startEditReflection() {
@@ -36,14 +60,19 @@ async function saveReflection() {
   editingReflection.value = false
 }
 
+function parseDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 function prevDay() {
-  const d = new Date(store.currentDate)
+  const d = parseDate(store.currentDate)
   d.setDate(d.getDate() - 1)
   store.loadEntry(formatDate(d))
 }
 
 function nextDay() {
-  const d = new Date(store.currentDate)
+  const d = parseDate(store.currentDate)
   d.setDate(d.getDate() + 1)
   store.loadEntry(formatDate(d))
 }
@@ -58,24 +87,35 @@ function goToday() {
   const d = new Date()
   store.loadEntry(formatDate(d))
 }
+
+function onDatePick(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) store.loadEntry(val)
+}
 </script>
 
 <template>
   <div class="diary-page">
     <!-- 日期切换 -->
     <div class="date-bar">
-      <button @click="prevDay">‹</button>
-      <span @click="goToday">{{ store.currentDate }}</span>
-      <button @click="nextDay">›</button>
+      <button @click="prevDay" class="date-arrow">‹</button>
+      <input
+        type="date"
+        :value="store.currentDate"
+        @change="onDatePick"
+        class="date-picker"
+      />
+      <button @click="goToday" class="today-btn">今天</button>
+      <button @click="nextDay" class="date-arrow">›</button>
     </div>
 
     <!-- 快速输入 -->
     <div class="quick-input">
+      <input type="time" v-model="inputTime" class="time-input" />
       <input
         v-model="inputText"
         @keyup.enter="submit"
         placeholder="记一笔..."
-        autofocus
       />
       <button @click="submit" :disabled="!inputText.trim()">记</button>
     </div>
@@ -85,11 +125,24 @@ function goToday() {
       <div v-for="p in periodOrder" :key="p" class="period-group">
         <template v-if="store.groupedRecords[p].length">
           <div class="period-label">{{ periodLabels[p] }}</div>
-          <div v-for="r in store.groupedRecords[p]" :key="r.id" class="record-item">
-            <span class="record-time">{{ r.time }}</span>
-            <span class="record-text">{{ r.text }}</span>
-            <button class="delete-btn" @click="store.deleteRecord(r.id)">×</button>
-          </div>
+          <template v-for="r in store.groupedRecords[p]" :key="r.id">
+            <!-- 编辑模式 -->
+            <div v-if="editingId === r.id" class="record-edit">
+              <input type="time" v-model="editTime" class="time-input" />
+              <input v-model="editText" @keyup.enter="saveEdit" placeholder="内容" />
+              <div class="edit-actions">
+                <button @click="cancelEdit" class="cancel-btn">取消</button>
+                <button @click="saveEdit" class="save-btn">保存</button>
+              </div>
+            </div>
+            <!-- 正常展示 -->
+            <div v-else class="record-item">
+              <span class="record-time">{{ r.time }}</span>
+              <span class="record-text" @click="startEdit(r.id, r.time, r.text)">{{ r.text }}</span>
+              <button class="edit-btn" @click="startEdit(r.id, r.time, r.text)">改</button>
+              <button class="delete-btn" @click="store.deleteRecord(r.id)">×</button>
+            </div>
+          </template>
         </template>
       </div>
       <div v-if="!store.entry?.records.length" class="empty-hint">

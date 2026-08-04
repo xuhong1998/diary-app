@@ -22,6 +22,13 @@ export function nowTime(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function parseTimeToDate(time: string): Date {
+  const [h, m] = time.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h || 0, m || 0, 0, 0)
+  return d
+}
+
 export const useDiaryStore = defineStore('diary', () => {
   const currentDate = ref(todayStr())
   const entry = ref<DiaryEntry | null>(null)
@@ -50,18 +57,32 @@ export const useDiaryStore = defineStore('diary', () => {
   async function save() {
     if (!entry.value) return
     entry.value.updatedAt = Date.now()
-    await db.entries.put({ ...entry.value })
+    const plain = JSON.parse(JSON.stringify(entry.value))
+    await db.entries.put(plain)
   }
 
-  async function addRecord(text: string) {
+  async function addRecord(text: string, time?: string) {
     if (!text.trim()) return
     const e = await ensureEntry()
+    const t = time || nowTime()
     e.records.push({
       id: crypto.randomUUID(),
-      time: nowTime(),
+      time: t,
       text: text.trim(),
-      period: getPeriod(),
+      period: getPeriod(parseTimeToDate(t)),
     })
+    await save()
+  }
+
+  async function updateRecord(id: string, updates: { text?: string; time?: string }) {
+    if (!entry.value) return
+    const r = entry.value.records.find(r => r.id === id)
+    if (!r) return
+    if (updates.text !== undefined) r.text = updates.text.trim()
+    if (updates.time !== undefined) {
+      r.time = updates.time
+      r.period = getPeriod(parseTimeToDate(updates.time))
+    }
     await save()
   }
 
@@ -93,6 +114,9 @@ export const useDiaryStore = defineStore('diary', () => {
       for (const r of entry.value.records) {
         groups[r.period].push(r)
       }
+      for (const p of Object.keys(groups) as Period[]) {
+        groups[p].sort((a, b) => a.time.localeCompare(b.time))
+      }
     }
     return groups
   })
@@ -108,6 +132,7 @@ export const useDiaryStore = defineStore('diary', () => {
     groupedRecords,
     loadEntry,
     addRecord,
+    updateRecord,
     deleteRecord,
     updateReflection,
     updateModuleData,
