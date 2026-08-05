@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { Dialog } from '@varlet/ui'
 import { useDiaryStore } from '@/stores/diary'
 import type { AlgorithmProblem } from '@/types'
 
@@ -29,6 +30,12 @@ const difficultyLabels = {
   hard: '困难',
 }
 
+const difficultyChipType = {
+  easy: 'success',
+  medium: 'warning',
+  hard: 'danger',
+} as const
+
 async function addProblem() {
   if (!newProblem.value.title.trim()) return
   problems.value.push({
@@ -44,8 +51,14 @@ async function addProblem() {
 }
 
 async function deleteProblem(index: number) {
-  problems.value.splice(index, 1)
-  await store.updateModuleData('algorithm', { problems: problems.value })
+  Dialog({
+    title: '删除题目',
+    message: '确定删除这道题目的记录吗？',
+    onConfirm: async () => {
+      problems.value.splice(index, 1)
+      await store.updateModuleData('algorithm', { problems: problems.value })
+    },
+  })
 }
 </script>
 
@@ -55,37 +68,80 @@ async function deleteProblem(index: number) {
 
     <!-- 添加题目 -->
     <div class="add-form">
-      <input v-model="newProblem.title" placeholder="题目名称" />
-      <select v-model="newProblem.difficulty">
-        <option value="easy">简单</option>
-        <option value="medium">中等</option>
-        <option value="hard">困难</option>
-      </select>
-      <input v-model="newProblem.tags" placeholder="标签 (逗号分隔)" />
-      <textarea v-model="newProblem.note" placeholder="思路笔记 (可选)" rows="2"></textarea>
-      <button class="primary" @click="addProblem" :disabled="!newProblem.title.trim()">
+      <var-input variant="outlined" size="small" v-model="newProblem.title" placeholder="题目名称" />
+      <var-select variant="outlined" size="small" v-model="newProblem.difficulty" placeholder="难度">
+        <var-option value="easy">简单</var-option>
+        <var-option value="medium">中等</var-option>
+        <var-option value="hard">困难</var-option>
+      </var-select>
+      <var-input variant="outlined" size="small" v-model="newProblem.tags" placeholder="标签 (逗号分隔)" />
+      <var-input
+        variant="outlined"
+        size="small"
+        :multiline="true"
+        :rows="2"
+        v-model="newProblem.note"
+        placeholder="思路笔记 (可选)"
+      />
+      <var-button type="primary" block :disabled="!newProblem.title.trim()" @click="addProblem">
         添加
-      </button>
+      </var-button>
     </div>
 
     <!-- 题目列表 -->
     <div class="problem-list">
-      <div v-for="(p, i) in problems" :key="i" class="problem-item">
+      <var-paper
+        v-for="(p, i) in problems"
+        :key="i"
+        :elevation="2"
+        class="problem-item"
+      >
         <div class="problem-header">
           <span class="problem-title">{{ p.title }}</span>
-          <span class="difficulty" :data-d="p.difficulty">
+          <var-chip :type="difficultyChipType[p.difficulty]">
             {{ difficultyLabels[p.difficulty] }}
-          </span>
-          <button class="delete-btn" @click="deleteProblem(i)">×</button>
+          </var-chip>
+          <var-button text size="small" @click="deleteProblem(i)">×</var-button>
         </div>
         <div v-if="p.tags.length" class="tags">
-          <span v-for="t in p.tags" :key="t" class="tag">{{ t }}</span>
+          <var-chip v-for="t in p.tags" :key="t">{{ t }}</var-chip>
         </div>
         <div v-if="p.note" class="problem-note">{{ p.note }}</div>
-      </div>
-      <div v-if="!problems.length" class="empty-hint">
+      </var-paper>
+      <var-paper v-if="!problems.length" :elevation="0" class="empty-hint">
         今天还没有刷题记录
-      </div>
+      </var-paper>
     </div>
   </div>
 </template>
+
+<style scoped>
+.problem-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.problem-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 15px;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.problem-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+}
+.empty-hint {
+  text-align: center;
+  color: #bbb;
+  padding: 40px 0;
+  font-size: 14px;
+}
+</style>

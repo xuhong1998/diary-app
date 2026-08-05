@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db } from '@/db/dexie'
+import { pushEntry, syncAll, getLastSyncAt, isConfigured, type SyncResult } from '@/db/sync'
+import { useAuthStore } from '@/stores/auth'
 import type { DiaryEntry, DiaryRecord, Period } from '@/types'
 
 function todayStr(): string {
@@ -30,8 +32,11 @@ function parseTimeToDate(time: string): Date {
 }
 
 export const useDiaryStore = defineStore('diary', () => {
+  const auth = useAuthStore()
   const currentDate = ref(todayStr())
   const entry = ref<DiaryEntry | null>(null)
+  const syncing = ref(false)
+  const lastSyncAt = ref(getLastSyncAt())
 
   async function loadEntry(date: string) {
     currentDate.value = date
@@ -59,6 +64,9 @@ export const useDiaryStore = defineStore('diary', () => {
     entry.value.updatedAt = Date.now()
     const plain = JSON.parse(JSON.stringify(entry.value))
     await db.entries.put(plain)
+    if (auth.isSignedIn && isConfigured()) {
+      pushEntry(plain).catch(e => console.warn('[diary] push error', e))
+    }
   }
 
   async function addRecord(text: string, time?: string) {
@@ -126,10 +134,35 @@ export const useDiaryStore = defineStore('diary', () => {
     return all.map(e => e.date)
   }
 
+  async function syncNow(): Promise<SyncResult> {
+    if (!auth.isSignedIn || !isConfigured() || syncing.value) {
+      return { pulled: 0, pushed: 0, lastSyncAt: lastSyncAt.value }
+    }
+    syncing.value = true
+    try {
+      const res = await syncAll()
+      lastSyncAt.value = res.lastSyncAt
+      if (entry.value) {
+        const fresh = await db.entries.get(entry.value.date)
+        if (fresh) entry.value = fresh
+      }
+      return res
+    } finally {
+      syncing.value = false
+    }
+  }
+
+  async function pullFromCloud() {
+    if (!auth.isSignedIn || !isConfigured()) return
+    await syncNow()
+  }
+
   return {
     currentDate,
     entry,
     groupedRecords,
+    syncing,
+    lastSyncAt,
     loadEntry,
     addRecord,
     updateRecord,
@@ -137,5 +170,7 @@ export const useDiaryStore = defineStore('diary', () => {
     updateReflection,
     updateModuleData,
     getDateList,
+    syncNow,
+    pullFromCloud,
   }
 })

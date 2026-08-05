@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { Dialog } from '@varlet/ui'
 import { useDiaryStore } from '@/stores/diary'
 import type { TodoItem } from '@/types'
 
@@ -31,8 +32,14 @@ async function toggleTodo(index: number) {
 }
 
 async function deleteTodo(index: number) {
-  todos.value.splice(index, 1)
-  await store.updateModuleData('todo', { items: todos.value })
+  Dialog({
+    title: '删除待办',
+    message: '确定删除这条待办吗？',
+    onConfirm: async () => {
+      todos.value.splice(index, 1)
+      await store.updateModuleData('todo', { items: todos.value })
+    },
+  })
 }
 </script>
 
@@ -41,22 +48,36 @@ async function deleteTodo(index: number) {
     <h2>待办事项</h2>
 
     <div class="quick-input">
-      <input
+      <var-input
+        variant="outlined"
+        size="small"
         v-model="newTodo"
-        @keyup.enter="addTodo"
         placeholder="添加待办..."
+        @keydown.enter="addTodo"
       />
-      <button @click="addTodo" :disabled="!newTodo.trim()">+</button>
+      <var-button
+        type="primary"
+        size="small"
+        round
+        :disabled="!newTodo.trim()"
+        @click="addTodo"
+      >+</var-button>
     </div>
 
     <div class="todo-list">
-      <div v-for="(item, i) in todos" :key="i" class="todo-item">
-        <label>
-          <input type="checkbox" :checked="item.done" @change="toggleTodo(i)" />
-          <span :class="{ done: item.done }">{{ item.text }}</span>
-        </label>
-        <button class="delete-btn" @click="deleteTodo(i)">×</button>
-      </div>
+      <var-cell
+        v-for="(item, i) in todos"
+        :key="i"
+        class="todo-cell"
+      >
+        <template #icon>
+          <var-checkbox v-model="item.done" @change="toggleTodo(i)" />
+        </template>
+        <span :class="{ done: item.done }">{{ item.text }}</span>
+        <template #extra>
+          <var-button text size="small" @click="deleteTodo(i)">×</var-button>
+        </template>
+      </var-cell>
     </div>
 
     <div class="stats">
@@ -64,3 +85,14 @@ async function deleteTodo(index: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.todo-page {
+  --var-cell-horizontal-padding: 12px;
+  --var-cell-vertical-padding: 12px;
+}
+.done {
+  text-decoration: line-through;
+  color: #bbb;
+}
+</style>

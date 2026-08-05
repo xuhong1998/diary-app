@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import Components from 'unplugin-vue-components/vite'
+import { VarletImportResolver } from '@varlet/import-resolver'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   base: process.env.BASE_PATH || '/',
   plugins: [
     vue(),
+    Components({
+      dts: false,
+      resolvers: [VarletImportResolver()],
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {

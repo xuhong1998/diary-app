@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Snackbar } from '@varlet/ui'
 import { exportToJSON, downloadFile } from '@/utils/exporter'
 
 const exportMode = ref<'today' | 'range' | 'all'>('all')
 const dateFrom = ref('')
 const dateTo = ref('')
-const message = ref('')
 
 async function doExport() {
   const json = await exportToJSON(exportMode.value, dateFrom.value, dateTo.value)
@@ -16,7 +16,7 @@ async function doExport() {
   const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
 
   downloadFile(json, `diary-export-${stamp}.json`)
-  message.value = `导出成功！共 ${count} 条记录`
+  Snackbar.success(`导出成功！共 ${count} 条记录`)
 }
 </script>
 
@@ -25,18 +25,9 @@ async function doExport() {
     <h2>导出数据</h2>
 
     <div class="export-options">
-      <label>
-        <input type="radio" v-model="exportMode" value="all" />
-        全部数据
-      </label>
-      <label>
-        <input type="radio" v-model="exportMode" value="today" />
-        仅今天
-      </label>
-      <label>
-        <input type="radio" v-model="exportMode" value="range" />
-        日期范围
-      </label>
+      <var-radio v-model="exportMode" value="all">全部数据</var-radio>
+      <var-radio v-model="exportMode" value="today">仅今天</var-radio>
+      <var-radio v-model="exportMode" value="range">日期范围</var-radio>
     </div>
 
     <div v-if="exportMode === 'range'" class="date-range">
@@ -50,11 +41,7 @@ async function doExport() {
       </div>
     </div>
 
-    <button class="primary-btn" @click="doExport">
-      导出 JSON
-    </button>
-
-    <div v-if="message" class="success-msg">{{ message }}</div>
+    <var-button type="primary" block @click="doExport">导出 JSON</var-button>
 
     <div class="tip">
       导出的 JSON 文件可用 <code>scripts/json-to-md.mjs</code> 脚本转换为 Markdown 文件
