@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { createInterface } from 'node:readline'
 
 const GREEN = '\x1b[32m'
 const RED = '\x1b[31m'
 const CYAN = '\x1b[36m'
+const YELLOW = '\x1b[33m'
 const RESET = '\x1b[0m'
 
 function log(msg) { console.log(`${CYAN}[deploy]${RESET} ${msg}`) }
@@ -19,6 +21,16 @@ function run(cmd, opts = {}) {
     const stderr = e.stderr?.trim() || e.message
     die(`Command failed: ${cmd}\n${stderr}`)
   }
+}
+
+function ask(question) {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    rl.question(question, (answer) => {
+      rl.close()
+      resolve(answer.trim().toLowerCase())
+    })
+  })
 }
 
 try {
@@ -42,9 +54,24 @@ try {
   run('npm run build', { env: { ...process.env, BASE_PATH: '/diary-app' } })
   ok('Build passed')
 
+  console.log()
+  log('Changed files:')
+  console.log(`  ${YELLOW}${status.replace(/\n/g, '\n  ')}${RESET}`)
+  console.log()
+
   const pkg = JSON.parse(readFileSync('package.json', 'utf-8'))
   const ts = new Date().toISOString().slice(0, 16).replace('T', ' ')
   const commitMsg = `deploy: ${pkg.version} ${ts}`
+
+  log(`Commit message: "${commitMsg}"`)
+  console.log()
+
+  const answer = await ask(`${YELLOW}Commit and push to origin/main? [y/N]${RESET} `)
+  if (answer !== 'y' && answer !== 'yes') {
+    console.log('Aborted. Nothing was committed or pushed.')
+    process.exit(0)
+  }
+  console.log()
 
   log('Staging changes...')
   run('git add -A')

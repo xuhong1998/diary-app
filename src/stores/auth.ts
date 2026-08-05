@@ -34,9 +34,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function signInWithGithub() {
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL
     await supabase.auth.signInWithOAuth({
       provider: 'github',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo },
     })
   }
 
