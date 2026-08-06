@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useDiaryStore, nowTime } from '@/stores/diary'
 import { toast } from '@/utils/toast'
+import { fetchWeatherData, getCachedWeather, getWeatherSvg, type WeatherData } from '@/utils/weather'
 import type { Period } from '@/types'
 
 const store = useDiaryStore()
-const inputText = ref('')
-const inputTime = ref(nowTime())
+const quickAddText = ref('')
 const quickAddOpen = ref(false)
 const reflectionSheetOpen = ref(false)
 const reflectionText = ref('')
 const editingId = ref<string | null>(null)
 const editTime = ref('')
 const editText = ref('')
+const weatherData = ref<WeatherData | null>(null)
+const weatherLoading = ref(false)
 
 const periodLabels: Record<Period, string> = {
   morning: '上午',
@@ -24,7 +26,40 @@ const periodOrder: Period[] = ['morning', 'afternoon', 'evening']
 
 onMounted(() => {
   store.loadEntry(store.currentDate)
+  loadWeather(store.currentDate)
 })
+
+watch(() => store.currentDate, (date) => {
+  loadWeather(date)
+})
+
+async function loadWeather(date: string) {
+  weatherData.value = getCachedWeather(date)
+  const today = formatDate(new Date())
+  if (date !== today) return
+  try {
+    weatherLoading.value = true
+    const data = await fetchWeatherData(date)
+    weatherData.value = data
+  } catch {
+    if (!weatherData.value) toast('获取天气失败')
+  } finally {
+    weatherLoading.value = false
+  }
+}
+
+async function refreshWeather() {
+  weatherLoading.value = true
+  try {
+    const data = await fetchWeatherData(store.currentDate)
+    weatherData.value = data
+    toast('天气已更新')
+  } catch {
+    toast('获取天气失败，请允许定位权限')
+  } finally {
+    weatherLoading.value = false
+  }
+}
 
 const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
@@ -99,19 +134,34 @@ function onDatePick(e: Event) {
 }
 
 function openQuickAdd() {
-  inputText.value = ''
-  inputTime.value = nowTime()
+  quickAddText.value = ''
   quickAddOpen.value = true
 }
 
 async function submitQuickAdd() {
-  if (!inputText.value.trim()) return
-  inputTime.value = normalizeTime(inputTime.value)
-  await store.addRecord(inputText.value, inputTime.value)
-  inputText.value = ''
-  inputTime.value = nowTime()
+  const raw = quickAddText.value.trim()
+  if (!raw) return
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
+  let count = 0
+  for (const line of lines) {
+    const match = line.match(/^(\d{1,2}[:：]\d{1,2}|\d{3,4})\s*(.*)$/)
+    let time: string
+    let text: string
+    if (match) {
+      time = normalizeTime(match[1])
+      text = match[2].trim()
+    } else {
+      time = nowTime()
+      text = line
+    }
+    if (text) {
+      await store.addRecord(text, time)
+      count++
+    }
+  }
+  quickAddText.value = ''
   quickAddOpen.value = false
-  toast('已记录')
+  toast(count > 1 ? `已记录 ${count} 条` : '已记录')
 }
 
 function startEdit(id: string, time: string, text: string) {
@@ -161,6 +211,23 @@ async function saveReflection() {
       <div class="hero-date">{{ heroDateText }}</div>
       <div class="hero-weekday">{{ heroWeekdayText }}</div>
       <div class="hero-meta">
+        <div v-if="weatherData" class="hero-pill" @click="refreshWeather" style="cursor:pointer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="getWeatherSvg(weatherData.icon)"></svg>
+          {{ weatherData.temp }}° {{ weatherData.desc }}
+          <span v-if="weatherData.humidity" style="opacity:0.7;margin-left:4px;">{{ weatherData.humidity }}%</span>
+        </div>
+        <div v-else-if="weatherLoading" class="hero-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          定位中
+        </div>
+        <div v-else class="hero-pill" @click="refreshWeather" style="cursor:pointer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/><circle cx="12" cy="12" r="5"/></svg>
+          获取天气
+        </div>
+        <div v-if="weatherData" class="hero-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {{ weatherData.city }}
+        </div>
         <div class="hero-pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           {{ recordCount }} 条
@@ -246,17 +313,14 @@ async function saveReflection() {
 
   <!-- Quick Add Sheet -->
   <div class="sheet-overlay" :class="{ open: quickAddOpen }" @click="quickAddOpen = false"></div>
-  <div class="sheet" :class="{ open: quickAddOpen }">
+  <div class="sheet quick-add-sheet" :class="{ open: quickAddOpen }">
     <div class="sheet-grabber"></div>
     <div class="sheet-title">记一笔</div>
-    <div class="sheet-body">
-      <div class="quick-add-row">
-        <input class="quick-add-time" v-model="inputTime" placeholder="HH:MM" @blur="inputTime = normalizeTime(inputTime)">
-        <input class="quick-add-input" v-model="inputText" placeholder="今天发生了什么..." @keydown.enter="submitQuickAdd">
-      </div>
+    <div class="sheet-body" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <textarea class="quick-add-editor" v-model="quickAddText" placeholder="7:10 起床刷牙准备坐地铁&#10;8:50 下地铁吃了半笼小笼包&#10;11:30 点外卖吃鸡排饭"></textarea>
       <div class="sheet-actions">
         <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="quickAddOpen = false">取消</button>
-        <button class="ios-btn-sm" style="flex:1;" :disabled="!inputText.trim()" @click="submitQuickAdd">记录</button>
+        <button class="ios-btn-sm" style="flex:1;" :disabled="!quickAddText.trim()" @click="submitQuickAdd">记录</button>
       </div>
     </div>
   </div>

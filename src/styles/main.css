@@ -1627,6 +1627,31 @@ body {
 
 .sheet-textarea::placeholder { color: var(--label-tertiary); }
 
+/* Quick Add full-height editor */
+.quick-add-sheet {
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.quick-add-editor {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-size: 16px;
+  line-height: 1.8;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+}
+
+.quick-add-editor::placeholder { color: var(--label-tertiary); }
+
 .sheet-actions {
   display: flex;
   justify-content: space-between;
@@ -1778,4 +1803,8 @@ body {
   15% { opacity: 1; transform: translate(-50%, 0); }
   85% { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
