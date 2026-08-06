@@ -19,7 +19,7 @@ export default defineConfig({
         name: '我的日记',
         short_name: '日记',
         description: '随时随地记录生活',
-        theme_color: '#42b883',
+        theme_color: '#007AFF',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
