@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Dialog, Snackbar } from '@varlet/ui'
+import { ref, computed, onMounted } from 'vue'
 import { useDiaryStore, nowTime } from '@/stores/diary'
+import { toast } from '@/utils/toast'
 import type { Period } from '@/types'
 
 const store = useDiaryStore()
 const inputText = ref('')
 const inputTime = ref(nowTime())
-const editingReflection = ref(false)
+const quickAddOpen = ref(false)
+const reflectionSheetOpen = ref(false)
 const reflectionText = ref('')
 const editingId = ref<string | null>(null)
 const editTime = ref('')
@@ -24,6 +25,30 @@ const periodOrder: Period[] = ['morning', 'afternoon', 'evening']
 onMounted(() => {
   store.loadEntry(store.currentDate)
 })
+
+const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+const heroDateText = computed(() => {
+  const [, m, d] = store.currentDate.split('-').map(Number)
+  return `${m}月${d}日`
+})
+
+const heroWeekdayText = computed(() => {
+  const [y, m, d] = store.currentDate.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const wd = weekdays[date.getDay()]
+  const today = formatDate(new Date())
+  if (store.currentDate === today) return `${wd} · 今天`
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (store.currentDate === formatDate(tomorrow)) return `${wd} · 明天`
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (store.currentDate === formatDate(yesterday)) return `${wd} · 昨天`
+  return wd
+})
+
+const recordCount = computed(() => store.entry?.records.length ?? 0)
 
 function normalizeTime(input: string): string {
   const cleaned = input.trim().replace(/：/g, ':').replace(/[^\d:]/g, '')
@@ -45,12 +70,48 @@ function normalizeTime(input: string): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-async function submit() {
+function parseDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function formatDate(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+function prevDay() {
+  const d = parseDate(store.currentDate)
+  d.setDate(d.getDate() - 1)
+  store.loadEntry(formatDate(d))
+}
+
+function nextDay() {
+  const d = parseDate(store.currentDate)
+  d.setDate(d.getDate() + 1)
+  store.loadEntry(formatDate(d))
+}
+
+function onDatePick(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) store.loadEntry(val)
+}
+
+function openQuickAdd() {
+  inputText.value = ''
+  inputTime.value = nowTime()
+  quickAddOpen.value = true
+}
+
+async function submitQuickAdd() {
   if (!inputText.value.trim()) return
   inputTime.value = normalizeTime(inputTime.value)
   await store.addRecord(inputText.value, inputTime.value)
   inputText.value = ''
   inputTime.value = nowTime()
+  quickAddOpen.value = false
+  toast('已记录')
 }
 
 function startEdit(id: string, time: string, text: string) {
@@ -71,190 +132,146 @@ async function saveEdit() {
     text: editText.value,
   })
   editingId.value = null
-  Snackbar.success('已保存')
+  toast('已保存')
 }
 
-function confirmDelete(id: string) {
-  Dialog({
-    title: '删除记录',
-    message: '确定删除这条记录吗？',
-    onConfirm: async () => {
-      await store.deleteRecord(id)
-      Snackbar.success('已删除')
-    },
-  })
+async function confirmDelete(id: string) {
+  await store.deleteRecord(id)
+  toast('已删除')
 }
 
 function startEditReflection() {
   reflectionText.value = store.entry?.reflection ?? ''
-  editingReflection.value = true
+  reflectionSheetOpen.value = true
 }
 
 async function saveReflection() {
   await store.updateReflection(reflectionText.value)
-  editingReflection.value = false
-  Snackbar.success('感悟已保存')
-}
-
-function parseDate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function prevDay() {
-  const d = parseDate(store.currentDate)
-  d.setDate(d.getDate() - 1)
-  store.loadEntry(formatDate(d))
-}
-
-function nextDay() {
-  const d = parseDate(store.currentDate)
-  d.setDate(d.getDate() + 1)
-  store.loadEntry(formatDate(d))
-}
-
-function formatDate(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
-
-function goToday() {
-  const d = new Date()
-  store.loadEntry(formatDate(d))
-}
-
-function onDatePick(e: Event) {
-  const val = (e.target as HTMLInputElement).value
-  if (val) store.loadEntry(val)
+  reflectionSheetOpen.value = false
+  toast('感悟已保存')
 }
 </script>
 
 <template>
-  <div class="diary-page">
-    <!-- 日期切换 -->
-    <div class="date-bar">
-      <var-button text round @click="prevDay" class="date-arrow">‹</var-button>
-      <input
-        type="date"
-        :value="store.currentDate"
-        @change="onDatePick"
-        class="date-picker"
-      />
-      <var-button text size="small" @click="goToday" class="today-btn">今天</var-button>
-      <var-button text round @click="nextDay" class="date-arrow">›</var-button>
+  <div class="page-pad">
+    <!-- Hero Header -->
+    <div class="diary-hero">
+      <div class="hero-nav left"><button @click="prevDay">‹</button></div>
+      <div class="hero-nav right"><button @click="nextDay">›</button></div>
+      <div class="hero-date">{{ heroDateText }}</div>
+      <div class="hero-weekday">{{ heroWeekdayText }}</div>
+      <div class="hero-meta">
+        <div class="hero-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {{ recordCount }} 条
+        </div>
+      </div>
     </div>
 
-    <!-- 快速输入 -->
-    <div class="quick-input">
-      <var-input
-        variant="outlined"
-        size="small"
-        v-model="inputTime"
-        placeholder="HH:MM"
-        style="width: 92px"
-        @blur="inputTime = normalizeTime(inputTime)"
-      />
-      <var-input
-        variant="outlined"
-        size="small"
-        v-model="inputText"
-        placeholder="记一笔..."
-        @keydown.enter="submit"
-      />
-      <var-button type="primary" size="small" @click="submit" :disabled="!inputText.trim()">记</var-button>
-    </div>
+    <!-- Hidden date picker for navigation -->
+    <input
+      type="date"
+      :value="store.currentDate"
+      @change="onDatePick"
+      style="position: absolute; opacity: 0; pointer-events: none;"
+    />
 
-    <!-- 今日记录 -->
-    <div class="records">
-      <div v-for="p in periodOrder" :key="p" class="period-group">
+    <!-- Timeline -->
+    <div class="timeline" v-if="recordCount">
+      <div v-for="p in periodOrder" :key="p" class="timeline-period">
         <template v-if="store.groupedRecords[p].length">
-          <div class="period-label">{{ periodLabels[p] }}</div>
+          <div class="timeline-dot" :class="p"></div>
+          <div class="timeline-line"></div>
+          <div class="timeline-label">{{ periodLabels[p] }}</div>
           <template v-for="r in store.groupedRecords[p]" :key="r.id">
-            <!-- 编辑模式 -->
-            <div v-if="editingId === r.id" class="record-edit">
-              <var-input
-                variant="outlined"
-                size="small"
+            <!-- Edit mode -->
+            <div v-if="editingId === r.id" class="entry-edit">
+              <input
+                class="time-input"
                 v-model="editTime"
                 placeholder="HH:MM"
-                style="width: 92px"
                 @blur="editTime = normalizeTime(editTime)"
               />
-              <var-input
-                variant="outlined"
-                size="small"
+              <input
+                class="search-input"
                 v-model="editText"
                 placeholder="内容"
                 @keydown.enter="saveEdit"
               />
-              <div class="edit-actions">
-                <var-button size="small" @click="cancelEdit">取消</var-button>
-                <var-button type="primary" size="small" @click="saveEdit">保存</var-button>
+              <div class="entry-edit-actions">
+                <button class="ios-btn-secondary ios-btn-sm" @click="cancelEdit">取消</button>
+                <button class="ios-btn-sm" @click="saveEdit">保存</button>
               </div>
             </div>
-            <!-- 正常展示 -->
-            <var-cell
-              v-else
-              v-ripple
-              class="record-cell"
-              @click="startEdit(r.id, r.time, r.text)"
-            >
-              <template #icon>
-                <span class="record-time">{{ r.time }}</span>
-              </template>
-              <span class="record-text">{{ r.text }}</span>
-              <template #extra>
-                <var-button text size="small" @click.stop="startEdit(r.id, r.time, r.text)">改</var-button>
-                <var-button text size="small" @click.stop="confirmDelete(r.id)">删</var-button>
-              </template>
-            </var-cell>
+            <!-- Normal display -->
+            <div v-else class="timeline-entry" @click="startEdit(r.id, r.time, r.text)">
+              <span class="entry-time">{{ r.time }}</span>
+              <span class="entry-text">{{ r.text }}</span>
+              <div class="entry-actions">
+                <button class="icon-btn muted" @click.stop="startEdit(r.id, r.time, r.text)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="icon-btn danger" @click.stop="confirmDelete(r.id)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
           </template>
         </template>
       </div>
-      <var-paper v-if="!store.entry?.records.length" class="empty-hint" :elevation="0">
-        还没有记录，记一笔吧
-      </var-paper>
     </div>
 
-    <!-- 感悟 -->
-    <div class="reflection">
-      <div class="section-title" @click="startEditReflection">
-        🌙 感悟
-      </div>
-      <var-paper
-        class="reflection-view"
-        :elevation="2"
-        v-ripple
-        @click="startEditReflection"
-      >
-        {{ store.entry?.reflection || '点击写感悟...' }}
-      </var-paper>
+    <!-- Empty state -->
+    <div v-else class="empty-state">
+      <div class="empty-text">还没有记录，点 + 记一笔吧</div>
     </div>
 
-    <!-- 感悟编辑弹层 -->
-    <var-popup position="bottom" v-model:show="editingReflection" :overlay="false">
-      <div class="reflection-popup">
-        <div class="reflection-popup-title">🌙 写写今天的感悟</div>
-        <var-input
-          variant="outlined"
-          :multiline="true"
-          :rows="6"
-          v-model="reflectionText"
-          placeholder="今天有什么想说的..."
-        />
-        <div class="reflection-actions">
-          <var-button @click="editingReflection = false">取消</var-button>
-          <var-button type="primary" @click="saveReflection">保存</var-button>
+    <!-- Reflection -->
+    <div class="reflection-v2" @click="startEditReflection" style="margin: 16px 16px 0;">
+      <div class="reflection-v2-header">
+        <div class="reflection-v2-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </div>
+        <span class="reflection-v2-title">今日感悟</span>
       </div>
-    </var-popup>
+      <div v-if="store.entry?.reflection" class="reflection-v2-text">{{ store.entry.reflection }}</div>
+      <div v-else class="reflection-v2-placeholder">点击写感悟...</div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" @click="openQuickAdd">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- Quick Add Sheet -->
+  <div class="sheet-overlay" :class="{ open: quickAddOpen }" @click="quickAddOpen = false"></div>
+  <div class="sheet" :class="{ open: quickAddOpen }">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-title">记一笔</div>
+    <div class="sheet-body">
+      <div class="quick-add-row">
+        <input class="quick-add-time" v-model="inputTime" placeholder="HH:MM" @blur="inputTime = normalizeTime(inputTime)">
+        <input class="quick-add-input" v-model="inputText" placeholder="今天发生了什么..." @keydown.enter="submitQuickAdd">
+      </div>
+      <div class="sheet-actions">
+        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="quickAddOpen = false">取消</button>
+        <button class="ios-btn-sm" style="flex:1;" :disabled="!inputText.trim()" @click="submitQuickAdd">记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reflection Sheet -->
+  <div class="sheet-overlay" :class="{ open: reflectionSheetOpen }" @click="reflectionSheetOpen = false"></div>
+  <div class="sheet" :class="{ open: reflectionSheetOpen }">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-title">写写今天的感悟</div>
+    <div class="sheet-body">
+      <textarea class="sheet-textarea" v-model="reflectionText" placeholder="今天有什么想说的..."></textarea>
+      <div class="sheet-actions">
+        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="reflectionSheetOpen = false">取消</button>
+        <button class="ios-btn-sm" style="flex:1;" @click="saveReflection">保存</button>
+      </div>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.diary-page {
-  --var-cell-horizontal-padding: 12px;
-  --var-cell-vertical-padding: 10px;
-}
-</style>

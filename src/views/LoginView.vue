@@ -13,99 +13,35 @@ watch(() => auth.isSignedIn, (signedIn) => {
 
 <template>
   <div class="login-page">
-    <div class="login-logo">📝</div>
-    <h1 class="login-title">我的日记</h1>
-    <p class="login-subtitle">登录后可跨设备同步</p>
-
-    <var-button
-      v-if="auth.configured"
-      type="primary"
-      block
-      size="large"
-      :loading="false"
-      @click="auth.signInWithGithub"
-    >
-      <svg viewBox="0 0 16 16" width="18" height="18" style="margin-right: 8px" fill="currentColor">
-        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    <div class="login-logo">
+      <svg width="48" height="48" viewBox="0 0 148 180" fill="none">
+        <path d="M20,20 L130,20 Q148,20 148,38 L148,182 Q148,200 130,200 L20,200 Q2,200 2,182 L2,38 Q2,20 20,20 Z" fill="#fff" rx="16"/>
+        <path d="M2,50 L148,50" stroke="#E0E8F0" stroke-width="2"/>
+        <rect x="2" y="20" width="22" height="180" fill="rgba(0,122,255,0.3)" rx="4"/>
+        <line x1="13" y1="20" x2="13" y2="200" stroke="#0051D5" stroke-width="2" opacity="0.4"/>
+        <line x1="36" y1="76" x2="120" y2="76" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
+        <line x1="36" y1="100" x2="120" y2="100" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
+        <line x1="36" y1="124" x2="100" y2="124" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
+        <line x1="36" y1="148" x2="116" y2="148" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
       </svg>
-      使用 GitHub 登录
-    </var-button>
+    </div>
+    <div class="login-title">我的日记</div>
+    <div class="login-subtitle">登录后可跨设备同步<br>保留每一天的回忆</div>
 
-    <div v-else class="login-hint">
+    <div v-if="auth.configured" class="login-btn-wrap">
+      <button class="ios-btn" @click="auth.signInWithGithub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        使用 GitHub 登录
+      </button>
+    </div>
+
+    <div v-else class="tip-box" style="max-width:320px;">
       Supabase 未配置，请在 <code>.env</code> 中填写
       <code>VITE_SUPABASE_URL</code> 与 <code>VITE_SUPABASE_ANON_KEY</code>
     </div>
 
-    <p class="login-footer">数据保存在你的 Supabase 项目中，可随时导出备份</p>
+    <div class="login-footer">
+      数据保存在你的 Supabase 项目中，可随时导出备份
+    </div>
   </div>
 </template>
-
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  text-align: center;
-}
-
-.login-logo {
-  font-size: 56px;
-  margin-bottom: 16px;
-}
-
-.login-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1d2129;
-}
-
-.login-subtitle {
-  color: #999;
-  font-size: 14px;
-  margin-top: 8px;
-  margin-bottom: 40px;
-}
-
-.login-button {
-  background: #42b883;
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  padding: 14px 28px;
-  font-size: 16px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  width: 100%;
-  justify-content: center;
-}
-
-.login-footer {
-  margin-top: 32px;
-  color: #bbb;
-  font-size: 12px;
-  line-height: 1.6;
-  max-width: 280px;
-}
-
-.login-hint {
-  color: #e74c3c;
-  font-size: 14px;
-  line-height: 1.6;
-  padding: 20px;
-  background: #fff5f5;
-  border-radius: 12px;
-}
-
-.login-hint code {
-  background: #ffe0e0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-</style>

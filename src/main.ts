@@ -4,7 +4,6 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { useDiaryStore } from './stores/diary'
-import '@varlet/ui/es/style'
 import './styles/main.css'
 
 const app = createApp(App)
