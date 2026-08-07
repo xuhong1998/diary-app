@@ -102,7 +102,7 @@ function getLocation(log: (msg: string) => void): Promise<{ lat: number; lon: nu
       return
     }
 
-    log('开始定位... (enableHighAccuracy=false, timeout=10s, maximumAge=10min)')
+    log('开始定位... (enableHighAccuracy=false, timeout=20s, maximumAge=10min)')
     navigator.geolocation.getCurrentPosition(
       pos => {
         const { latitude, longitude, accuracy } = pos.coords
@@ -114,12 +114,12 @@ function getLocation(log: (msg: string) => void): Promise<{ lat: number; lon: nu
         const codeMap: Record<number, string> = {
           1: 'PERMISSION_DENIED(用户拒绝定位或浏览器/系统禁止了定位权限)',
           2: 'POSITION_UNAVAILABLE(GPS未开启或位置信息不可用)',
-          3: 'TIMEOUT(10秒内未获取到位置)',
+          3: 'TIMEOUT(20秒内未获取到位置)',
         }
         log(`定位失败: code=${err.code} ${codeMap[err.code] || '未知错误'} | message=${err.message} | 权限态=${perm}`)
         reject(err)
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 }
     )
   })
 }
