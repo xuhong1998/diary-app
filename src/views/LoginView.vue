@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { fetchWeatherData, getWeatherSvg, type WeatherData } from '@/utils/weather'
+// import { fetchWeatherData, getWeatherSvg, type WeatherData } from '@/utils/weather'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -11,34 +11,36 @@ watch(() => auth.isSignedIn, (signedIn) => {
   if (signedIn) router.replace({ name: 'diary' })
 })
 
-const debugLog = ref<string[]>([])
-const weatherData = ref<WeatherData | null>(null)
-const debugLoading = ref(false)
-
-const envSummary = `Secure=${window.isSecureContext} · ${location.protocol.replace(':', '').toUpperCase()} · ${window.self !== window.top ? 'iframe' : '顶层'} · ${navigator.userAgent.slice(0, 60)}`
-
-function addLog(msg: string) {
-  const now = new Date().toLocaleTimeString()
-  debugLog.value.unshift(`[${now}] ${msg}`)
-}
-
-async function testLocation() {
-  debugLoading.value = true
-  debugLog.value = []
-  weatherData.value = null
-  addLog(`环境: ${envSummary}`)
-  try {
-    const today = new Date().toISOString().slice(0, 10)
-    addLog(`日期: ${today}`)
-    const data = await fetchWeatherData(today, addLog)
-    weatherData.value = data
-    addLog(`✅ 成功: ${data.city} ${data.temp}°C ${data.desc} 湿度${data.humidity}%${data.locationFallback ? ' (定位未成功，显示默认城市)' : ''}`)
-  } catch (e: any) {
-    addLog(`❌ 失败: ${e?.message || e}`)
-  } finally {
-    debugLoading.value = false
-  }
-}
+// === 调试代码（定位 + 天气测试），如需排查定位问题取消注释即可 ===
+// const debugLog = ref<string[]>([])
+// const weatherData = ref<WeatherData | null>(null)
+// const debugLoading = ref(false)
+//
+// const envSummary = `Secure=${window.isSecureContext} · ${location.protocol.replace(':', '').toUpperCase()} · ${window.self !== window.top ? 'iframe' : '顶层'} · ${navigator.userAgent.slice(0, 60)}`
+//
+// function addLog(msg: string) {
+//   const now = new Date().toLocaleTimeString()
+//   debugLog.value.unshift(`[${now}] ${msg}`)
+// }
+//
+// async function testLocation() {
+//   debugLoading.value = true
+//   debugLog.value = []
+//   weatherData.value = null
+//   addLog(`环境: ${envSummary}`)
+//   try {
+//     const today = new Date().toISOString().slice(0, 10)
+//     addLog(`日期: ${today}`)
+//     const data = await fetchWeatherData(today, addLog)
+//     weatherData.value = data
+//     addLog(`✅ 成功: ${data.city} ${data.temp}°C ${data.desc} 湿度${data.humidity}%${data.locationFallback ? ' (定位未成功，显示默认城市)' : ''}`)
+//   } catch (e: any) {
+//     addLog(`❌ 失败: ${e?.message || e}`)
+//   } finally {
+//     debugLoading.value = false
+//   }
+// }
+// === 调试代码结束 ===
 </script>
 
 <template>
@@ -58,7 +60,8 @@ async function testLocation() {
     <div class="login-title">我的日记</div>
     <div class="login-subtitle">登录后可跨设备同步<br>保留每一天的回忆</div>
 
-    <!-- 调试: 定位 + 天气 -->
+    <!-- 调试: 定位 + 天气（如需排查定位问题取消注释即可） -->
+    <!--
     <div style="width:100%; max-width:360px; margin:24px auto 0; text-align:left;">
       <button class="ios-btn" :disabled="debugLoading" @click="testLocation" style="width:100%; margin-bottom:12px;">
         {{ debugLoading ? '测试中...' : '测试定位 + 天气' }}
@@ -77,6 +80,7 @@ async function testLocation() {
         <div v-for="(log, i) in debugLog" :key="i">{{ log }}</div>
       </div>
     </div>
+    -->
 
     <div v-if="auth.configured" class="login-btn-wrap">
       <button class="ios-btn" @click="auth.signInWithGithub">
