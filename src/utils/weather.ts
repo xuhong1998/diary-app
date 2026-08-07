@@ -81,47 +81,60 @@ async function getPermissionState(): Promise<string> {
   return 'unknown'
 }
 
-function getLocation(log: (msg: string) => void): Promise<{ lat: number; lon: number }> {
+function getCurrentPositionOnce(options: PositionOptions): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
-    const supported = 'geolocation' in navigator
-    const secure = window.isSecureContext
-    const inIframe = window.self !== window.top
-
-    log(`环境检测: isSecureContext=${secure}, protocol=${location.protocol}, inIframe=${inIframe}, geolocationSupported=${supported}`)
-    log(`页面地址: ${location.href}`)
-    log(`UA: ${navigator.userAgent}`)
-
-    if (!secure) {
-      log('定位不可用: 当前非安全上下文(geolocation 必须在 HTTPS 下运行)')
-      reject(new Error('非安全上下文(需HTTPS)，定位不可用'))
-      return
-    }
-    if (!supported) {
-      log('定位不可用: 浏览器不支持 Geolocation API')
-      reject(new Error('浏览器不支持定位'))
-      return
-    }
-
-    log('开始定位... (enableHighAccuracy=false, timeout=20s, maximumAge=10min)')
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude, longitude, accuracy } = pos.coords
-        log(`定位成功: lat=${latitude}, lon=${longitude}, accuracy=${accuracy}m`)
-        resolve({ lat: latitude, lon: longitude })
-      },
-      async err => {
-        const perm = await getPermissionState()
-        const codeMap: Record<number, string> = {
-          1: 'PERMISSION_DENIED(用户拒绝定位或浏览器/系统禁止了定位权限)',
-          2: 'POSITION_UNAVAILABLE(GPS未开启或位置信息不可用)',
-          3: 'TIMEOUT(20秒内未获取到位置)',
-        }
-        log(`定位失败: code=${err.code} ${codeMap[err.code] || '未知错误'} | message=${err.message} | 权限态=${perm}`)
-        reject(err)
-      },
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 }
-    )
+    navigator.geolocation.getCurrentPosition(resolve, reject, options)
   })
+}
+
+async function getLocation(log: (msg: string) => void): Promise<{ lat: number; lon: number }> {
+  const supported = 'geolocation' in navigator
+  const secure = window.isSecureContext
+  const inIframe = window.self !== window.top
+
+  log(`环境检测: isSecureContext=${secure}, protocol=${location.protocol}, inIframe=${inIframe}, geolocationSupported=${supported}`)
+  log(`页面地址: ${location.href}`)
+  log(`UA: ${navigator.userAgent}`)
+
+  if (!secure) {
+    log('定位不可用: 当前非安全上下文(geolocation 必须在 HTTPS 下运行)')
+    throw new Error('非安全上下文(需HTTPS)，定位不可用')
+  }
+  if (!supported) {
+    log('定位不可用: 浏览器不支持 Geolocation API')
+    throw new Error('浏览器不支持定位')
+  }
+
+  // 策略：先低精度(网络定位，快)，失败后重试高精度(GPS，慢但更可靠)
+  const attempts = [
+    { label: '低精度(网络定位)', opts: { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 } },
+    { label: '高精度(GPS)', opts: { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 } },
+  ]
+
+  let lastErr: GeolocationPositionError | null = null
+  for (const attempt of attempts) {
+    log(`开始定位(${attempt.label}): timeout=${attempt.opts.timeout}ms, maximumAge=${attempt.opts.maximumAge}ms`)
+    try {
+      const pos = await getCurrentPositionOnce(attempt.opts)
+      const { latitude, longitude, accuracy } = pos.coords
+      log(`定位成功(${attempt.label}): lat=${latitude}, lon=${longitude}, accuracy=${accuracy}m`)
+      return { lat: latitude, lon: longitude }
+    } catch (err) {
+      lastErr = err as GeolocationPositionError
+      const codeMap: Record<number, string> = {
+        1: 'PERMISSION_DENIED(用户拒绝定位或浏览器/系统禁止了定位权限)',
+        2: 'POSITION_UNAVAILABLE(GPS未开启或位置信息不可用)',
+        3: 'TIMEOUT(超时未获取到位置)',
+      }
+      log(`定位失败(${attempt.label}): code=${lastErr.code} ${codeMap[lastErr.code] || '未知错误'} | message=${lastErr.message}`)
+      // 权限被拒就不必重试了
+      if (lastErr.code === 1) break
+    }
+  }
+
+  const perm = await getPermissionState()
+  log(`所有定位方式均失败，权限态=${perm}`)
+  throw lastErr || new Error('定位失败')
 }
 
 function getIconName(desc: string): string {
