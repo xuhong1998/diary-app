@@ -13,8 +13,11 @@ onMounted(async () => {
 
 const problems = ref<AlgorithmProblem[]>([])
 const algoSheetOpen = ref(false)
+const editingIndex = ref<number | null>(null)
 const expandedNotes = ref<Set<number>>(new Set())
 const stats = ref({ today: 0, total: 0, streak: 0 })
+
+const isEditing = computed(() => editingIndex.value !== null)
 
 const newProblem = ref({
   title: '',
@@ -102,24 +105,44 @@ function selectDiff(diff: AlgorithmProblem['difficulty']) {
 }
 
 function openAlgoSheet() {
+  editingIndex.value = null
   newProblem.value = { title: '', difficulty: 'easy', tags: '', note: '' }
   algoSheetOpen.value = true
 }
 
-async function addProblem() {
+function openEditSheet(index: number) {
+  const p = problems.value[index]
+  editingIndex.value = index
+  newProblem.value = {
+    title: p.title,
+    difficulty: p.difficulty,
+    tags: p.tags.join(', '),
+    note: p.note ?? '',
+  }
+  algoSheetOpen.value = true
+}
+
+async function saveProblem() {
   if (!newProblem.value.title.trim()) return
-  problems.value.push({
+  const wasEditing = editingIndex.value !== null
+  const data = {
     title: newProblem.value.title.trim(),
     difficulty: newProblem.value.difficulty,
     tags: newProblem.value.tags
       .split(/[,，\s]+/)
       .filter(Boolean),
     note: newProblem.value.note.trim() || undefined,
-  })
+  }
+  if (wasEditing && editingIndex.value !== null) {
+    problems.value[editingIndex.value] = data
+  } else {
+    problems.value.push(data)
+  }
   await store.updateModuleData('algorithm', { problems: problems.value })
   algoSheetOpen.value = false
+  editingIndex.value = null
   await loadStats()
-  toast('已添加')
+  toast(wasEditing ? '已更新' : '已添加')
 }
 
 async function deleteProblem(index: number) {
@@ -190,6 +213,9 @@ function toggleNoteExpand(index: number) {
       <div class="problem-v2-header">
         <span class="problem-v2-title">{{ p.title }}</span>
         <span class="badge" :class="'badge-' + p.difficulty">{{ difficultyLabels[p.difficulty] }}</span>
+        <button class="icon-btn" @click="openEditSheet(i)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
         <button class="icon-btn danger" @click="deleteProblem(i)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
@@ -221,7 +247,7 @@ function toggleNoteExpand(index: number) {
   <div class="sheet-overlay" :class="{ open: algoSheetOpen }" @click="algoSheetOpen = false"></div>
   <div class="sheet" :class="{ open: algoSheetOpen }">
     <div class="sheet-grabber"></div>
-    <div class="sheet-title">添加算法题</div>
+    <div class="sheet-title">{{ isEditing ? '编辑算法题' : '添加算法题' }}</div>
     <div class="sheet-body">
       <!-- Title -->
       <div class="algo-form-field">
@@ -269,7 +295,7 @@ function toggleNoteExpand(index: number) {
 
       <div class="sheet-actions">
         <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="algoSheetOpen = false">取消</button>
-        <button class="ios-btn-sm" style="flex:1;" :disabled="!newProblem.title.trim()" @click="addProblem">添加</button>
+        <button class="ios-btn-sm" style="flex:1;" :disabled="!newProblem.title.trim()" @click="saveProblem">{{ isEditing ? '保存' : '添加' }}</button>
       </div>
     </div>
   </div>
