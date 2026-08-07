@@ -166,6 +166,24 @@ async function reverseGeocode(lat: number, lon: number, log: (msg: string) => vo
   return { city, adcode: adcode.replace(/^(省|国)/, '') }
 }
 
+async function locateByIp(log: (msg: string) => void): Promise<{ city: string; adcode: string }> {
+  if (!AMAP_KEY) {
+    log('高德 Key 未配置，IP 定位不可用')
+    return { city: '', adcode: '' }
+  }
+  log('IP 定位请求: restapi.amap.com/v3/ip')
+  const res = await fetch(`https://restapi.amap.com/v3/ip?key=${AMAP_KEY}&output=JSON`)
+  const data = await res.json()
+  log(`高德IP定位返回: ${JSON.stringify(data)}`)
+  if (data.status !== '1' || !data.adcode) {
+    log('IP 定位无结果')
+    return { city: '', adcode: '' }
+  }
+  const city = data.city || data.province || ''
+  log(`IP 定位结果: city=${city}, adcode=${data.adcode}`)
+  return { city, adcode: data.adcode }
+}
+
 async function getWeatherFromAmap(adcode: string, log: (msg: string) => void): Promise<{ temp: number; desc: string; humidity: string }> {
   if (!AMAP_KEY) {
     log('高德 Key 未配置，无法获取天气')
@@ -194,30 +212,50 @@ export async function fetchWeatherData(date: string, onLog?: Logger): Promise<We
   const log = makeLogger(onLog)
   log(`===== fetchWeatherData 开始, date=${date} =====`)
 
-  let lat: number | undefined
-  let lon: number | undefined
-  let locationFailed = false
+  let city = '未知'
+  let adcode = ''
+  let locationFallback = false
+  let geoSource = ''
 
+  // 优先 GPS 定位(精确)
   try {
     const pos = await getLocation(log)
-    lat = pos.lat
-    lon = pos.lon
-  } catch {
-    locationFailed = true
-    log(`⚠️ 定位失败，将使用默认城市(${DEFAULT_CITY})获取天气`)
-  }
-
-  let city = locationFailed ? DEFAULT_CITY : '未知'
-  let adcode = locationFailed ? DEFAULT_ADCODE : ''
-
-  if (!locationFailed && lat !== undefined && lon !== undefined) {
     try {
-      const geo = await reverseGeocode(lat, lon, log)
+      const geo = await reverseGeocode(pos.lat, pos.lon, log)
       city = geo.city
       adcode = geo.adcode
+      geoSource = 'GPS'
     } catch {
-      log('⚠️ 逆地理失败，城市将显示为默认，天气仍可获取')
+      log('⚠️ 逆地理失败，尝试 IP 定位兜底')
     }
+  } catch {
+    log('⚠️ GPS 定位失败')
+  }
+
+  // GPS 没拿到城市 → IP 定位兜底(无需权限，不超时)
+  if (!adcode) {
+    try {
+      const ipLoc = await locateByIp(log)
+      if (ipLoc.adcode) {
+        city = ipLoc.city
+        adcode = ipLoc.adcode
+        geoSource = 'IP'
+        locationFallback = true
+        log(`ℹ️ 使用 IP 定位城市: ${city}`)
+      }
+    } catch {
+      log('⚠️ IP 定位也失败')
+    }
+  }
+
+  // IP 也失败 → 默认城市
+  if (!adcode) {
+    city = DEFAULT_CITY
+    adcode = DEFAULT_ADCODE
+    locationFallback = true
+    log(`ℹ️ 所有定位失败，使用默认城市: ${DEFAULT_CITY}`)
+  } else {
+    log(`定位来源: ${geoSource}`)
   }
 
   const weather = await getWeatherFromAmap(adcode, log)
@@ -229,7 +267,7 @@ export async function fetchWeatherData(date: string, onLog?: Logger): Promise<We
     desc: weather.desc,
     icon: getIconName(weather.desc),
     humidity: weather.humidity,
-    locationFallback: locationFailed || undefined,
+    locationFallback: locationFallback || undefined,
   }
   cacheWeather(date, data)
   log(`===== fetchWeatherData 完成 =====`)
