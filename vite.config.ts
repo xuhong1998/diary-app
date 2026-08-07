@@ -3,12 +3,14 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import Components from 'unplugin-vue-components/vite'
 import { VarletImportResolver } from '@varlet/import-resolver'
+import mkcert from 'vite-plugin-mkcert'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   base: process.env.BASE_PATH || '/',
   plugins: [
     vue(),
+    mkcert(),
     Components({
       dts: false,
       resolvers: [VarletImportResolver()],
@@ -53,5 +55,6 @@ export default defineConfig({
   },
   server: {
     host: true,
+    https: true,
   },
 })

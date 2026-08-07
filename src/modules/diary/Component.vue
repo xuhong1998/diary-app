@@ -53,7 +53,7 @@ async function refreshWeather() {
   try {
     const data = await fetchWeatherData(store.currentDate)
     weatherData.value = data
-    toast('天气已更新')
+    toast(data.locationFallback ? '定位未成功，显示默认城市天气' : '天气已更新')
   } catch {
     toast('获取天气失败，请允许定位权限')
   } finally {
@@ -224,9 +224,10 @@ async function saveReflection() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/><circle cx="12" cy="12" r="5"/></svg>
           获取天气
         </div>
-        <div v-if="weatherData" class="hero-pill">
+        <div v-if="weatherData" class="hero-pill" :title="weatherData.locationFallback ? '定位未成功，显示默认城市' : ''">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          {{ weatherData.city }}
+          <template v-if="weatherData.locationFallback">⚠️ {{ weatherData.city }}</template>
+          <template v-else>{{ weatherData.city }}</template>
         </div>
         <div class="hero-pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

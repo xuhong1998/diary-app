@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { fetchWeatherData, getWeatherSvg, type WeatherData } from '@/utils/weather'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -9,6 +10,35 @@ const router = useRouter()
 watch(() => auth.isSignedIn, (signedIn) => {
   if (signedIn) router.replace({ name: 'diary' })
 })
+
+const debugLog = ref<string[]>([])
+const weatherData = ref<WeatherData | null>(null)
+const debugLoading = ref(false)
+
+const envSummary = `Secure=${window.isSecureContext} · ${location.protocol.replace(':', '').toUpperCase()} · ${window.self !== window.top ? 'iframe' : '顶层'} · ${navigator.userAgent.slice(0, 60)}`
+
+function addLog(msg: string) {
+  const now = new Date().toLocaleTimeString()
+  debugLog.value.unshift(`[${now}] ${msg}`)
+}
+
+async function testLocation() {
+  debugLoading.value = true
+  debugLog.value = []
+  weatherData.value = null
+  addLog(`环境: ${envSummary}`)
+  try {
+    const today = new Date().toISOString().slice(0, 10)
+    addLog(`日期: ${today}`)
+    const data = await fetchWeatherData(today, addLog)
+    weatherData.value = data
+    addLog(`✅ 成功: ${data.city} ${data.temp}°C ${data.desc} 湿度${data.humidity}%${data.locationFallback ? ' (定位未成功，显示默认城市)' : ''}`)
+  } catch (e: any) {
+    addLog(`❌ 失败: ${e?.message || e}`)
+  } finally {
+    debugLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -27,6 +57,26 @@ watch(() => auth.isSignedIn, (signedIn) => {
     </div>
     <div class="login-title">我的日记</div>
     <div class="login-subtitle">登录后可跨设备同步<br>保留每一天的回忆</div>
+
+    <!-- 调试: 定位 + 天气 -->
+    <div style="width:100%; max-width:360px; margin:24px auto 0; text-align:left;">
+      <button class="ios-btn" :disabled="debugLoading" @click="testLocation" style="width:100%; margin-bottom:12px;">
+        {{ debugLoading ? '测试中...' : '测试定位 + 天气' }}
+      </button>
+
+      <div v-if="weatherData" style="background:#fff; border-radius:16px; padding:16px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,0.06); display:flex; align-items:center; gap:12px;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="getWeatherSvg(weatherData.icon)"></svg>
+        <div>
+          <div style="font-size:20px; font-weight:600;">{{ weatherData.temp }}°C {{ weatherData.desc }}</div>
+          <div style="font-size:13px; color:#8e8e93;">📍 {{ weatherData.city }} · 湿度 {{ weatherData.humidity }}%</div>
+          <div v-if="weatherData.locationFallback" style="font-size:12px; color:#FF9500; margin-top:2px;">⚠️ 定位未成功，显示默认城市天气</div>
+        </div>
+      </div>
+
+      <div v-if="debugLog.length" style="background:#1e1e1e; color:#0f0; border-radius:12px; padding:12px; font-size:12px; font-family:monospace; max-height:200px; overflow-y:auto; line-height:1.6;">
+        <div v-for="(log, i) in debugLog" :key="i">{{ log }}</div>
+      </div>
+    </div>
 
     <div v-if="auth.configured" class="login-btn-wrap">
       <button class="ios-btn" @click="auth.signInWithGithub">

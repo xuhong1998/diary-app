@@ -4,10 +4,16 @@ export interface WeatherData {
   desc: string
   icon: string
   humidity: string
+  locationFallback?: boolean
 }
+
+export type Logger = (msg: string) => void
 
 const TIANDITU_TK = import.meta.env.VITE_TIANDITU_TK || ''
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || ''
+
+const DEFAULT_ADCODE = '420100'
+const DEFAULT_CITY = '武汉'
 
 const ICON_MAP: Record<string, string> = {
   晴: 'sun',
@@ -56,15 +62,63 @@ function cacheWeather(date: string, data: WeatherData) {
   localStorage.setItem(cacheKey(date), JSON.stringify(data))
 }
 
-function getLocation(): Promise<{ lat: number; lon: number }> {
+function makeLogger(onLog?: Logger): (msg: string) => void {
+  return (msg: string) => {
+    console.log('[weather]', msg)
+    onLog?.(msg)
+  }
+}
+
+async function getPermissionState(): Promise<string> {
+  try {
+    if (navigator.permissions?.query) {
+      const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
+      return result.state
+    }
+  } catch {
+    return 'unknown'
+  }
+  return 'unknown'
+}
+
+function getLocation(log: (msg: string) => void): Promise<{ lat: number; lon: number }> {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
+    const supported = 'geolocation' in navigator
+    const secure = window.isSecureContext
+    const inIframe = window.self !== window.top
+
+    log(`环境检测: isSecureContext=${secure}, protocol=${location.protocol}, inIframe=${inIframe}, geolocationSupported=${supported}`)
+    log(`页面地址: ${location.href}`)
+    log(`UA: ${navigator.userAgent}`)
+
+    if (!secure) {
+      log('定位不可用: 当前非安全上下文(geolocation 必须在 HTTPS 下运行)')
+      reject(new Error('非安全上下文(需HTTPS)，定位不可用'))
+      return
+    }
+    if (!supported) {
+      log('定位不可用: 浏览器不支持 Geolocation API')
       reject(new Error('浏览器不支持定位'))
       return
     }
+
+    log('开始定位... (enableHighAccuracy=false, timeout=10s, maximumAge=10min)')
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      err => reject(err),
+      pos => {
+        const { latitude, longitude, accuracy } = pos.coords
+        log(`定位成功: lat=${latitude}, lon=${longitude}, accuracy=${accuracy}m`)
+        resolve({ lat: latitude, lon: longitude })
+      },
+      async err => {
+        const perm = await getPermissionState()
+        const codeMap: Record<number, string> = {
+          1: 'PERMISSION_DENIED(用户拒绝定位或浏览器/系统禁止了定位权限)',
+          2: 'POSITION_UNAVAILABLE(GPS未开启或位置信息不可用)',
+          3: 'TIMEOUT(10秒内未获取到位置)',
+        }
+        log(`定位失败: code=${err.code} ${codeMap[err.code] || '未知错误'} | message=${err.message} | 权限态=${perm}`)
+        reject(err)
+      },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
     )
   })
@@ -77,33 +131,42 @@ function getIconName(desc: string): string {
   return 'cloud'
 }
 
-async function reverseGeocode(lat: number, lon: number): Promise<{ city: string; adcode: string }> {
+async function reverseGeocode(lat: number, lon: number, log: (msg: string) => void): Promise<{ city: string; adcode: string }> {
   if (!TIANDITU_TK) {
+    log('天地图 TK 未配置，跳过逆地理(城市将无法识别，天气会回退默认城市)')
     return { city: '未知', adcode: '' }
   }
   const ds = JSON.stringify({ keyWord: `${lon.toFixed(6)},${lat.toFixed(6)}` })
   const url = `https://api.tianditu.gov.cn/geocoder?postStr=${encodeURIComponent(ds)}&type=geocode&tk=${TIANDITU_TK}`
+  log(`逆地理请求: ${url}`)
   const res = await fetch(url)
   const data = await res.json()
+  log(`天地图返回: ${JSON.stringify(data)}`)
   if (data.status !== '0' || !data.location) {
+    log(`逆地理解析失败: status=${data.status ?? 'N/A'}, code=${data.code ?? 'N/A'}, msg=${data.msg ?? data.message ?? 'N/A'}`)
     throw new Error('天地图解析失败')
   }
   const comp = data.location
   const city = comp.city || comp.county || comp.province || '未知'
   const adcode = comp.countyCode || comp.cityCode || ''
+  log(`逆地理结果: city=${city}, adcode=${adcode}`)
   return { city, adcode: adcode.replace(/^(省|国)/, '') }
 }
 
-async function getWeatherFromAmap(adcode: string): Promise<{ temp: number; desc: string; humidity: string }> {
+async function getWeatherFromAmap(adcode: string, log: (msg: string) => void): Promise<{ temp: number; desc: string; humidity: string }> {
   if (!AMAP_KEY) {
+    log('高德 Key 未配置，无法获取天气')
     throw new Error('高德 Key 未配置')
   }
-  const city = adcode || '420100'
+  const city = adcode || DEFAULT_ADCODE
+  log(`天气请求: city=${city}${adcode ? '' : '(默认武汉)'}，URL=restapi.amap.com/v3/weather/weatherInfo`)
   const res = await fetch(
     `https://restapi.amap.com/v3/weather/weatherInfo?key=${AMAP_KEY}&city=${city}&extensions=base&output=JSON`
   )
   const data = await res.json()
+  log(`高德天气返回: ${JSON.stringify(data)}`)
   if (data.status !== '1' || !data.lives?.length) {
+    log('天气解析失败')
     throw new Error('天气获取失败')
   }
   const live = data.lives[0]
@@ -114,20 +177,38 @@ async function getWeatherFromAmap(adcode: string): Promise<{ temp: number; desc:
   }
 }
 
-export async function fetchWeatherData(date: string): Promise<WeatherData> {
-  const pos = await getLocation()
-  let city = '未知'
-  let adcode = ''
+export async function fetchWeatherData(date: string, onLog?: Logger): Promise<WeatherData> {
+  const log = makeLogger(onLog)
+  log(`===== fetchWeatherData 开始, date=${date} =====`)
+
+  let lat: number | undefined
+  let lon: number | undefined
+  let locationFailed = false
 
   try {
-    const geo = await reverseGeocode(pos.lat, pos.lon)
-    city = geo.city
-    adcode = geo.adcode
+    const pos = await getLocation(log)
+    lat = pos.lat
+    lon = pos.lon
   } catch {
-    // 定位解析失败，用默认城市
+    locationFailed = true
+    log(`⚠️ 定位失败，将使用默认城市(${DEFAULT_CITY})获取天气`)
   }
 
-  const weather = await getWeatherFromAmap(adcode)
+  let city = locationFailed ? DEFAULT_CITY : '未知'
+  let adcode = locationFailed ? DEFAULT_ADCODE : ''
+
+  if (!locationFailed && lat !== undefined && lon !== undefined) {
+    try {
+      const geo = await reverseGeocode(lat, lon, log)
+      city = geo.city
+      adcode = geo.adcode
+    } catch {
+      log('⚠️ 逆地理失败，城市将显示为默认，天气仍可获取')
+    }
+  }
+
+  const weather = await getWeatherFromAmap(adcode, log)
+  log(`天气数据: temp=${weather.temp}°C, desc=${weather.desc}, humidity=${weather.humidity}%`)
 
   const data: WeatherData = {
     city,
@@ -135,8 +216,10 @@ export async function fetchWeatherData(date: string): Promise<WeatherData> {
     desc: weather.desc,
     icon: getIconName(weather.desc),
     humidity: weather.humidity,
+    locationFallback: locationFailed || undefined,
   }
   cacheWeather(date, data)
+  log(`===== fetchWeatherData 完成 =====`)
   return data
 }
 
