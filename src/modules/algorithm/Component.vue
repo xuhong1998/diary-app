@@ -13,6 +13,9 @@ onMounted(async () => {
 
 const problems = ref<AlgorithmProblem[]>([])
 const algoSheetOpen = ref(false)
+const batchSheetOpen = ref(false)
+const batchText = ref('')
+const batchDifficulty = ref<AlgorithmProblem['difficulty']>('medium')
 const editingIndex = ref<number | null>(null)
 const expandedNotes = ref<Set<number>>(new Set())
 const stats = ref({ today: 0, total: 0, streak: 0 })
@@ -159,6 +162,41 @@ function toggleNoteExpand(index: number) {
     expandedNotes.value.add(index)
   }
 }
+
+const parsedProblems = computed(() => {
+  const text = batchText.value.trim()
+  if (!text) return [] as AlgorithmProblem[]
+  const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
+  return blocks.map(block => {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+    if (!lines.length) return null
+    const title = lines[0]
+    const tags = lines[1] ? lines[1].split(/[,，\s]+/).filter(Boolean) : []
+    const note = lines.slice(2).join('\n') || undefined
+    return { title, difficulty: batchDifficulty.value, tags, note }
+  }).filter(Boolean) as AlgorithmProblem[]
+})
+
+function openBatchSheet() {
+  batchText.value = ''
+  batchDifficulty.value = 'medium'
+  batchSheetOpen.value = true
+}
+
+function selectBatchDiff(diff: AlgorithmProblem['difficulty']) {
+  batchDifficulty.value = diff
+}
+
+async function batchImport() {
+  const parsed = parsedProblems.value
+  if (!parsed.length) return
+  problems.value.push(...parsed)
+  await store.updateModuleData('algorithm', { problems: problems.value })
+  batchSheetOpen.value = false
+  batchText.value = ''
+  await loadStats()
+  toast(`已导入 ${parsed.length} 道题`)
+}
 </script>
 
 <template>
@@ -195,6 +233,18 @@ function toggleNoteExpand(index: number) {
       <div class="add-trigger-text">
         <div class="add-trigger-title">添加题目</div>
         <div class="add-trigger-sub">记录今天刷的算法题和解题思路</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--label-quaternary)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+
+    <!-- Batch Import Trigger -->
+    <div class="add-trigger batch-trigger" @click="openBatchSheet">
+      <div class="add-trigger-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="add-trigger-text">
+        <div class="add-trigger-title">批量导入</div>
+        <div class="add-trigger-sub">粘贴文本快速导入多道题目</div>
       </div>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--label-quaternary)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
@@ -296,6 +346,60 @@ function toggleNoteExpand(index: number) {
       <div class="sheet-actions">
         <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="algoSheetOpen = false">取消</button>
         <button class="ios-btn-sm" style="flex:1;" :disabled="!newProblem.title.trim()" @click="saveProblem">{{ isEditing ? '保存' : '添加' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Import Sheet -->
+  <div class="sheet-overlay" :class="{ open: batchSheetOpen }" @click="batchSheetOpen = false"></div>
+  <div class="sheet batch-sheet" :class="{ open: batchSheetOpen }">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-title">批量导入</div>
+    <div class="sheet-body">
+      <div class="algo-form-field">
+        <div class="algo-field-label">默认难度</div>
+        <div class="diff-segmented" style="margin: 0;">
+          <div
+            class="diff-option"
+            :class="{ active: batchDifficulty === 'easy' }"
+            data-diff="easy"
+            @click="selectBatchDiff('easy')"
+          >简单</div>
+          <div
+            class="diff-option"
+            :class="{ active: batchDifficulty === 'medium' }"
+            data-diff="medium"
+            @click="selectBatchDiff('medium')"
+          >中等</div>
+          <div
+            class="diff-option"
+            :class="{ active: batchDifficulty === 'hard' }"
+            data-diff="hard"
+            @click="selectBatchDiff('hard')"
+          >困难</div>
+        </div>
+      </div>
+
+      <div class="algo-form-field">
+        <div class="algo-field-label">题目内容</div>
+        <textarea
+          class="algo-field-textarea batch-textarea"
+          v-model="batchText"
+          placeholder="每道题用空行分隔，格式：&#10;第一行：题目名称&#10;第二行：标签（逗号分隔）&#10;第三行起：解题思路&#10;&#10;例如：&#10;字符串解码&#10;单调栈&#10;这题主要需要两个单调栈…"
+        ></textarea>
+      </div>
+
+      <div v-if="parsedProblems.length" class="batch-preview">
+        <div class="batch-preview-title">预览 · {{ parsedProblems.length }} 题</div>
+        <div v-for="(p, i) in parsedProblems" :key="i" class="batch-preview-item">
+          <span class="batch-preview-name">{{ p.title }}</span>
+          <span v-if="p.tags.length" class="batch-preview-tags">{{ p.tags.join('、') }}</span>
+        </div>
+      </div>
+
+      <div class="sheet-actions">
+        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="batchSheetOpen = false">取消</button>
+        <button class="ios-btn-sm" style="flex:1;" :disabled="!parsedProblems.length" @click="batchImport">导入 {{ parsedProblems.length || '' }} 题</button>
       </div>
     </div>
   </div>

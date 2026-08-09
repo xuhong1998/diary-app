@@ -1128,6 +1128,58 @@ body {
   margin-top: 4px;
 }
 
+/* Batch import */
+.batch-trigger {
+  margin-top: 0;
+  border-style: solid;
+}
+.batch-trigger .add-trigger-icon {
+  background: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+}
+
+.batch-textarea {
+  min-height: 180px;
+  line-height: 1.7;
+}
+
+.batch-sheet { max-height: 88vh; overflow-y: auto; }
+
+.batch-preview {
+  margin: 0 16px 16px;
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+.batch-preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+.batch-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--separator);
+}
+.batch-preview-item:first-of-type { border-top: none; }
+.batch-preview-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--label-primary);
+}
+.batch-preview-tags {
+  font-size: 12px;
+  color: var(--label-tertiary);
+  background: var(--fill-quaternary);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
 /* ============================================
    Segmented Control
    ============================================ */
