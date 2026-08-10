@@ -155,9 +155,29 @@ async function saveEdit() {
   toast('已保存')
 }
 
+const pendingDelete = ref<{ id: string; time: string; text: string } | null>(null)
+let undoTimer: ReturnType<typeof setTimeout> | undefined
+
 async function confirmDelete(id: string) {
+  const record = store.entry?.records.find(r => r.id === id)
+  if (!record) return
+
   await store.deleteRecord(id)
+  pendingDelete.value = { id, time: record.time, text: record.text }
+
+  if (undoTimer) clearTimeout(undoTimer)
   toast('已删除')
+  undoTimer = setTimeout(() => {
+    pendingDelete.value = null
+  }, 3000)
+}
+
+async function undoDelete() {
+  if (!pendingDelete.value) return
+  if (undoTimer) clearTimeout(undoTimer)
+  await store.addRecord(pendingDelete.value.text, pendingDelete.value.time)
+  pendingDelete.value = null
+  toast('已恢复')
 }
 
 function startEditReflection() {
@@ -275,6 +295,12 @@ async function saveReflection() {
       <div v-if="store.entry?.reflection" class="reflection-v2-text">{{ store.entry.reflection }}</div>
       <div v-else class="reflection-v2-placeholder">点击写感悟...</div>
     </div>
+  </div>
+
+  <!-- Undo Delete Banner -->
+  <div v-if="pendingDelete" class="undo-banner" @click="undoDelete">
+    <span>已删除一条记录</span>
+    <span class="undo-action">撤销</span>
   </div>
 
   <!-- FAB -->

@@ -263,6 +263,20 @@ export const useDiaryStore = defineStore('diary', () => {
     connected.value = powerSyncDb.currentStatus?.connected ?? false
   }
 
+  async function searchRecords(keyword: string): Promise<{ date: string; time: string; text: string; period: Period }[]> {
+    if (!keyword.trim()) return []
+    try {
+      const rows = await powerSyncDb.getAll<{ date: string; time: string; text: string; period: Period }>(
+        `SELECT date, time, text, period FROM records WHERE deleted_at IS NULL AND text LIKE ? ORDER BY date DESC, time`,
+        [`%${keyword.trim()}%`]
+      )
+      return rows
+    } catch (e) {
+      console.error('[diary] searchRecords failed:', e)
+      return []
+    }
+  }
+
   return {
     currentDate,
     entry,
@@ -276,5 +290,6 @@ export const useDiaryStore = defineStore('diary', () => {
     updateModuleData,
     getDateList,
     updateConnectionStatus,
+    searchRecords,
   }
 })

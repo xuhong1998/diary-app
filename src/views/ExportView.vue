@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { exportToJSON, downloadFile } from '@/utils/exporter'
+import { powerSyncDb } from '@/db/powersync'
+import { getPeriod, parseTimeToDate } from '@/utils/date'
 import { toast } from '@/utils/toast'
+import type { Period } from '@/types'
 
 const exportMode = ref<'today' | 'range' | 'all'>('all')
 const dateFrom = ref('')
@@ -24,13 +27,72 @@ async function doExport() {
   downloadFile(json, `diary-export-${stamp}.json`)
   toast(`导出成功！共 ${count} 条记录`)
 }
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const importing = ref(false)
+
+function triggerImport() {
+  fileInput.value?.click()
+}
+
+async function handleFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  importing.value = true
+  try {
+    const text = await file.text()
+    const data = JSON.parse(text)
+
+    if (!data.entries || !Array.isArray(data.entries)) {
+      toast('文件格式不正确')
+      importing.value = false
+      return
+    }
+
+    let recordCount = 0
+    for (const entry of data.entries) {
+      if (!entry.date) continue
+
+      for (const record of entry.records ?? []) {
+        const id = crypto.randomUUID()
+        const now = Date.now()
+        await powerSyncDb.execute(
+          'INSERT INTO records (id, date, time, text, period, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [id, entry.date, record.time, record.text, getPeriod(parseTimeToDate(record.time)) as Period, now, now]
+        )
+        recordCount++
+      }
+
+      if (entry.reflection) {
+        await powerSyncDb.execute(
+          `INSERT INTO reflections (date, text, updated_at)
+           VALUES (?, ?, ?)
+           ON CONFLICT(date) DO UPDATE SET text = EXCLUDED.text, updated_at = EXCLUDED.updated_at`,
+          [entry.date, entry.reflection, Date.now()]
+        )
+      }
+    }
+
+    toast(`导入成功！共 ${recordCount} 条记录`)
+  } catch (err) {
+    console.error('[import] failed:', err)
+    toast('导入失败，请检查文件格式')
+  } finally {
+    importing.value = false
+    if (input) input.value = ''
+  }
+}
 </script>
 
 <template>
   <div class="page-pad">
     <div class="section-gap"></div>
 
-    <!-- Segmented Control -->
+    <!-- Export Section -->
+    <div class="list-header" style="padding: 0 20px 6px;">导出数据</div>
+
     <div class="segmented">
       <div
         v-for="m in modes"
@@ -41,9 +103,7 @@ async function doExport() {
       >{{ m.label }}</div>
     </div>
 
-    <!-- Date Range (only for range mode) -->
     <div v-if="exportMode === 'range'" class="list-section">
-      <div class="list-header">日期范围</div>
       <div class="list-group">
         <div class="list-row">
           <div class="row-content"><div class="row-title">从</div></div>
@@ -60,14 +120,21 @@ async function doExport() {
       </div>
     </div>
 
-    <!-- Export button -->
     <div style="margin: 16px;">
       <button class="ios-btn" @click="doExport">导出 JSON</button>
     </div>
 
-    <!-- Tip -->
+    <!-- Import Section -->
+    <div class="list-header" style="padding: 0 20px 6px; margin-top: 16px;">导入数据</div>
+    <div style="margin: 16px;">
+      <input ref="fileInput" type="file" accept=".json" style="display:none" @change="handleFile" />
+      <button class="ios-btn ios-btn-secondary" :disabled="importing" @click="triggerImport">
+        {{ importing ? '导入中...' : '选择 JSON 文件导入' }}
+      </button>
+    </div>
+
     <div class="tip-box">
-      导出的 JSON 文件可用 <code>scripts/json-to-md.mjs</code> 脚本转换为 Markdown 文件
+      导入会合并数据，不会覆盖已有记录<br>仅支持本应用导出的 JSON 格式
     </div>
   </div>
 </template>
