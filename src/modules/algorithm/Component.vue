@@ -199,8 +199,8 @@ async function batchImport() {
   <div class="page-pad">
     <!-- Hero Header -->
     <div class="algo-hero">
-      <div class="hero-nav left"><button @click="prevDay">‹</button></div>
-      <div class="hero-nav right"><button @click="nextDay">›</button></div>
+      <div class="hero-nav left"><button @click="prevDay" aria-label="上一天">‹</button></div>
+      <div class="hero-nav right"><button @click="nextDay" aria-label="下一天">›</button></div>
       <div class="algo-hero-title">算法练习</div>
       <div class="algo-hero-sub">{{ dateDisplay }}</div>
       <div class="algo-hero-stats">

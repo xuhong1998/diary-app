@@ -196,8 +196,8 @@ async function saveReflection() {
   <div class="page-pad">
     <!-- Hero Header -->
     <div class="diary-hero">
-      <div class="hero-nav left"><button @click="prevDay">‹</button></div>
-      <div class="hero-nav right"><button @click="nextDay">›</button></div>
+      <div class="hero-nav left"><button @click="prevDay" aria-label="上一天">‹</button></div>
+      <div class="hero-nav right"><button @click="nextDay" aria-label="下一天">›</button></div>
       <div class="hero-date">{{ heroDateText }}</div>
       <div class="hero-weekday">{{ heroWeekdayText }}</div>
       <div class="hero-meta">
@@ -231,7 +231,8 @@ async function saveReflection() {
       type="date"
       :value="store.currentDate"
       @change="onDatePick"
-      style="position: absolute; opacity: 0; pointer-events: none;"
+      aria-label="选择日期"
+      style="position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px;"
     />
 
     <!-- Timeline -->
@@ -304,7 +305,7 @@ async function saveReflection() {
   </div>
 
   <!-- FAB -->
-  <button class="fab" @click="openQuickAdd">
+  <button class="fab" @click="openQuickAdd" aria-label="添加记录">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
 
