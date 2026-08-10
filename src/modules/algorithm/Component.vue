@@ -38,7 +38,7 @@ function loadProblems() {
 watch(() => store.entry, async () => {
   loadProblems()
   await loadStats()
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 async function loadStats() {
   const all = await powerSyncDb.getAll<{ date: string; data: string }>(

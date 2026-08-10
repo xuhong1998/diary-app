@@ -11,6 +11,10 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 
+app.config.errorHandler = (err, _instance, info) => {
+  console.error('[vue] error:', info, err)
+}
+
 const auth = useAuthStore()
 const diary = useDiaryStore()
 

@@ -17,7 +17,7 @@ function loadTodos() {
   todos.value = store.entry?.moduleData?.todo?.items ?? []
 }
 
-watch(() => store.entry, loadTodos, { immediate: true, deep: true })
+watch(() => store.entry, loadTodos, { immediate: true })
 
 const activeTodos = computed(() => todos.value.filter(t => !t.done))
 const doneTodos = computed(() => todos.value.filter(t => t.done))
