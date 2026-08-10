@@ -711,9 +711,8 @@ body {
 }
 
 /* ============================================
-   Quick Add Sheet inputs
+   Algorithm Page Styles
    ============================================ */
-.quick-add-sheet {
 .algo-hero {
   margin: 0 16px 16px;
   padding: 24px 20px;
@@ -1433,7 +1432,7 @@ body {
 }
 
 /* ============================================
-   Algorithm Page Styles
+   Login Page
    ============================================ */
 .login-page {
   flex: 1;
