@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { powerSyncDb } from '@/db/powersync'
 import { formatDate, parseDate } from '@/utils/date'
+import { parseModuleData } from '@/utils/moduleData'
 import { toast } from '@/utils/toast'
 import type { AlgorithmProblem } from '@/types'
 
@@ -47,15 +48,12 @@ async function loadStats() {
   const dateMap: Record<string, number> = {}
   let total = 0
   for (const m of all) {
-    try {
-      let parsed: any = typeof m.data === 'string' ? JSON.parse(m.data) : m.data
-      if (typeof parsed === 'string') parsed = JSON.parse(parsed)
-      const count = parsed?.problems?.length ?? 0
-      if (count > 0) {
-        total += count
-        dateMap[m.date] = count
-      }
-    } catch {}
+    const parsed = parseModuleData(m.data) as { problems?: AlgorithmProblem[] }
+    const count = parsed.problems?.length ?? 0
+    if (count > 0) {
+      total += count
+      dateMap[m.date] = count
+    }
   }
   const todayStr = formatDate(new Date())
   const today = dateMap[todayStr] ?? 0

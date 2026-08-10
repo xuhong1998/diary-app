@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { powerSyncDb } from '@/db/powersync'
 import { todayStr, nowTime, parseTimeToDate, getPeriod } from '@/utils/date'
+import { parseModuleData, serializeModuleData } from '@/utils/moduleData'
 import type { DiaryEntry, DiaryRecord, Period } from '@/types'
 
 export { nowTime } from '@/utils/date'
@@ -55,13 +56,7 @@ export const useDiaryStore = defineStore('diary', () => {
 
     const moduleData: Record<string, any> = {}
     for (const m of modules) {
-      try {
-        let parsed: any = typeof m.data === 'string' ? JSON.parse(m.data) : m.data
-        if (typeof parsed === 'string') parsed = JSON.parse(parsed)
-        moduleData[m.module_id] = parsed
-      } catch {
-        moduleData[m.module_id] = {}
-      }
+      moduleData[m.module_id] = parseModuleData(m.data)
     }
 
     const minTs = records.length
@@ -179,7 +174,7 @@ export const useDiaryStore = defineStore('diary', () => {
   async function updateModuleData(moduleId: string, data: any) {
     const e = await ensureEntry()
     const now = Date.now()
-    const dataStr = JSON.stringify(data)
+    const dataStr = serializeModuleData(data)
 
     const existing = await powerSyncDb.getOptional<{ id: string }>(
       'SELECT id FROM modules WHERE date = ? AND module_id = ? AND deleted_at IS NULL',

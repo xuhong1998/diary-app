@@ -1,5 +1,6 @@
 import { powerSyncDb } from '@/db/powersync'
 import { formatDate } from '@/utils/date'
+import { parseModuleData } from '@/utils/moduleData'
 import type { DiaryEntry } from '@/types'
 
 interface RecordRow {
@@ -63,13 +64,7 @@ export async function exportToJSON(
 
     const moduleData: Record<string, any> = {}
     for (const m of modules) {
-      try {
-        let parsed: any = typeof m.data === 'string' ? JSON.parse(m.data) : m.data
-        if (typeof parsed === 'string') parsed = JSON.parse(parsed)
-        moduleData[m.module_id] = parsed
-      } catch {
-        moduleData[m.module_id] = {}
-      }
+      moduleData[m.module_id] = parseModuleData(m.data)
     }
 
     entries.push({
