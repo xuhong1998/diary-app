@@ -300,13 +300,6 @@ body {
   color: var(--label-tertiary);
 }
 
-.row-chevron {
-  width: 8px;
-  height: 14px;
-  color: var(--label-quaternary);
-  flex-shrink: 0;
-}
-
 /* ============================================
    Search Bar
    ============================================ */
@@ -720,96 +713,7 @@ body {
 /* ============================================
    Quick Add Sheet inputs
    ============================================ */
-.quick-add-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.quick-add-time {
-  width: 72px;
-  background: var(--bg-tertiary);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 10px;
-  font-size: 15px;
-  font-family: var(--font-stack);
-  color: var(--label-primary);
-  text-align: center;
-  outline: none;
-}
-
-.quick-add-input {
-  flex: 1;
-  background: var(--bg-tertiary);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 16px;
-  font-family: var(--font-stack);
-  color: var(--label-primary);
-  outline: none;
-}
-
-.quick-add-input::placeholder { color: var(--label-tertiary); }
-
-/* ============================================
-   Reflection Card v2
-   ============================================ */
-.reflection-v2 {
-  margin: 4px 0 8px;
-  background: linear-gradient(135deg, rgba(175, 82, 222, 0.08), rgba(175, 82, 222, 0.03));
-  border: 1px solid rgba(175, 82, 222, 0.12);
-  border-radius: var(--radius-lg);
-  padding: 18px 16px;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-
-.reflection-v2:active { transform: scale(0.98); }
-
-.reflection-v2-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.reflection-v2-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(175, 82, 222, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ios-purple);
-}
-
-.reflection-v2-icon svg { width: 16px; height: 16px; }
-
-.reflection-v2-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ios-purple);
-}
-
-.reflection-v2-text {
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--label-secondary);
-  white-space: pre-wrap;
-}
-
-.reflection-v2-placeholder {
-  font-size: 15px;
-  color: var(--label-quaternary);
-}
-
-/* ============================================
-   Algorithm Page Styles
-   ============================================ */
+.quick-add-sheet {
 .algo-hero {
   margin: 0 16px 16px;
   padding: 24px 20px;
@@ -1037,16 +941,6 @@ body {
   max-height: none;
 }
 
-.note-block-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  background: linear-gradient(transparent, var(--bg-tertiary));
-  pointer-events: none;
-}
-
 .note-expand-hint {
   display: flex;
   align-items: center;
@@ -1216,23 +1110,6 @@ body {
 }
 
 /* ============================================
-   Card
-   ============================================ */
-.card {
-  background: var(--bg-grouped);
-  border-radius: var(--radius-lg);
-  margin: 0 16px 12px;
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
-}
-
-.card-title {
-  font-size: 17px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-/* ============================================
    Todo Record Item
    ============================================ */
 .record-item {
@@ -1366,49 +1243,9 @@ body {
 }
 
 /* ============================================
-   Date Navigation Bar
+   Date Navigation
    ============================================ */
-.date-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px 12px;
-  gap: 8px;
-}
-
-.date-arrow {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--fill-quaternary);
-  color: var(--ios-blue);
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.15s;
-  flex-shrink: 0;
-}
-
-.date-arrow:active { opacity: 0.6; }
-
-.date-center {
-  flex: 1;
-  text-align: center;
-}
-
-.date-display {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--label-primary);
-}
-
-.date-weekday {
-  font-size: 12px;
-  color: var(--label-tertiary);
-}
+/* Date navigation handled by hero-nav buttons in diary/algorithm components */
 
 /* ============================================
    Sidebar Drawer
@@ -1543,7 +1380,60 @@ body {
 }
 
 /* ============================================
-   Login Page
+   Reflection Card v2
+   ============================================ */
+.reflection-v2 {
+  margin: 4px 0 8px;
+  background: linear-gradient(135deg, rgba(175, 82, 222, 0.08), rgba(175, 82, 222, 0.03));
+  border: 1px solid rgba(175, 82, 222, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.reflection-v2:active { transform: scale(0.98); }
+
+.reflection-v2-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.reflection-v2-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(175, 82, 222, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ios-purple);
+}
+
+.reflection-v2-icon svg { width: 16px; height: 16px; }
+
+.reflection-v2-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ios-purple);
+}
+
+.reflection-v2-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--label-secondary);
+  white-space: pre-wrap;
+}
+
+.reflection-v2-placeholder {
+  font-size: 15px;
+  color: var(--label-quaternary);
+}
+
+/* ============================================
+   Algorithm Page Styles
    ============================================ */
 .login-page {
   flex: 1;
@@ -1736,12 +1626,6 @@ body {
   padding: 60px 20px;
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.3;
-}
-
 .empty-text {
   font-size: 15px;
   color: var(--label-tertiary);
@@ -1779,33 +1663,6 @@ body {
   border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--ios-blue);
-}
-
-/* ============================================
-   Radio button iOS
-   ============================================ */
-.radio-ios {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid var(--label-quaternary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.radio-ios.checked {
-  border-color: var(--ios-blue);
-}
-
-.radio-ios.checked::after {
-  content: '';
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--ios-blue);
 }
 
 /* ============================================
