@@ -55,10 +55,10 @@ class BackendConnector {
         const { error } = await supabase
           .from(table)
           .update({ ...row, updated_at: now })
-          .eq('id', row.id)
+          .eq('id', op.id)
         if (error) throw error
       } else if (op.op === 'DELETE') {
-        const { error } = await supabase.from(table).delete().eq('id', row.id)
+        const { error } = await supabase.from(table).delete().eq('id', op.id)
         if (error) throw error
       }
     }
