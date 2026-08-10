@@ -49,14 +49,8 @@ const syncStatus = computed(() => {
   if (auth.loading) return ''
   if (!auth.configured) return '未配置云同步'
   if (!auth.isSignedIn) return '未登录'
-  if (diary.syncing) return '同步中…'
-  if (diary.lastSyncAt) {
-    const d = new Date(diary.lastSyncAt)
-    const hh = String(d.getHours()).padStart(2, '0')
-    const mm = String(d.getMinutes()).padStart(2, '0')
-    return `已同步 · ${hh}:${mm}`
-  }
-  return '已登录'
+  if (diary.connected) return '已同步'
+  return '离线'
 })
 
 function closeDrawer() {

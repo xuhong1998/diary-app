@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
-import { db } from '@/db/dexie'
+import { powerSyncDb } from '@/db/powersync'
 import { toast } from '@/utils/toast'
 import type { AlgorithmProblem } from '@/types'
 
@@ -39,15 +39,22 @@ watch(() => store.entry, async () => {
 }, { immediate: true, deep: true })
 
 async function loadStats() {
-  const all = await db.entries.toArray()
+  const all = await powerSyncDb.getAll<{ date: string; data: string }>(
+    'SELECT date, data FROM modules WHERE module_id = ? AND deleted_at IS NULL',
+    ['algorithm']
+  )
   const dateMap: Record<string, number> = {}
   let total = 0
-  for (const e of all) {
-    const count = e.moduleData?.algorithm?.problems?.length ?? 0
-    if (count > 0) {
-      total += count
-      dateMap[e.date] = count
-    }
+  for (const m of all) {
+    try {
+      let parsed: any = typeof m.data === 'string' ? JSON.parse(m.data) : m.data
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed)
+      const count = parsed?.problems?.length ?? 0
+      if (count > 0) {
+        total += count
+        dateMap[m.date] = count
+      }
+    } catch {}
   }
   const todayStr = formatDate(new Date())
   const today = dateMap[todayStr] ?? 0

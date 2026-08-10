@@ -12,6 +12,8 @@
     "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
+    "@powersync/vue": "^0.6.0",
+    "@powersync/web": "^2.1.1",
     "@supabase/supabase-js": "^2.112.0",
     "@varlet/ui": "^3.20.2",
     "dexie": "^4.0.10",

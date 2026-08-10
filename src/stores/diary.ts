@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { db } from '@/db/dexie'
-import { pushEntry, syncAll, getLastSyncAt, isConfigured, type SyncResult } from '@/db/sync'
-import { useAuthStore } from '@/stores/auth'
+import { powerSyncDb } from '@/db/powersync'
 import type { DiaryEntry, DiaryRecord, Period } from '@/types'
 
 function todayStr(): string {
@@ -31,20 +29,91 @@ function parseTimeToDate(time: string): Date {
   return d
 }
 
+interface RecordRow {
+  id: string
+  date: string
+  time: string
+  text: string
+  period: Period
+  created_at: number
+  updated_at: number
+  deleted_at: number | null
+}
+
+interface ReflectionRow {
+  date: string
+  text: string
+  updated_at: number
+}
+
+interface ModuleRow {
+  id: string
+  date: string
+  module_id: string
+  data: string
+  updated_at: number
+  deleted_at: number | null
+}
+
 export const useDiaryStore = defineStore('diary', () => {
-  const auth = useAuthStore()
   const currentDate = ref(todayStr())
   const entry = ref<DiaryEntry | null>(null)
-  const syncing = ref(false)
-  const lastSyncAt = ref(getLastSyncAt())
+  const connected = ref(false)
 
   async function loadEntry(date: string) {
     currentDate.value = date
-    const found = await db.entries.get(date)
-    entry.value = found ?? null
+
+    const records = await powerSyncDb.getAll<RecordRow>(
+      'SELECT * FROM records WHERE date = ? AND deleted_at IS NULL ORDER BY time',
+      [date]
+    )
+    const reflection = await powerSyncDb.getOptional<ReflectionRow>(
+      'SELECT * FROM reflections WHERE date = ?',
+      [date]
+    )
+    const modules = await powerSyncDb.getAll<ModuleRow>(
+      'SELECT * FROM modules WHERE date = ? AND deleted_at IS NULL',
+      [date]
+    )
+
+    const moduleData: Record<string, any> = {}
+    for (const m of modules) {
+      try {
+        let parsed: any = typeof m.data === 'string' ? JSON.parse(m.data) : m.data
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed)
+        moduleData[m.module_id] = parsed
+      } catch {
+        moduleData[m.module_id] = {}
+      }
+    }
+
+    const minTs = records.length
+      ? Math.min(...records.map(r => r.created_at))
+      : Date.now()
+
+    const maxTs = records.length
+      ? Math.max(...records.map(r => r.updated_at))
+      : 0
+
+    entry.value = {
+      date,
+      records: records.map(r => ({
+        id: r.id,
+        time: r.time,
+        text: r.text,
+        period: r.period,
+      })),
+      reflection: reflection?.text ?? '',
+      moduleData,
+      createdAt: minTs,
+      updatedAt: maxTs,
+    }
   }
 
   async function ensureEntry(): Promise<DiaryEntry> {
+    if (!entry.value) {
+      await loadEntry(currentDate.value)
+    }
     if (!entry.value) {
       const now = Date.now()
       entry.value = {
@@ -59,57 +128,101 @@ export const useDiaryStore = defineStore('diary', () => {
     return entry.value
   }
 
-  async function save() {
-    if (!entry.value) return
-    entry.value.updatedAt = Date.now()
-    const plain = JSON.parse(JSON.stringify(entry.value))
-    await db.entries.put(plain)
-    if (auth.isSignedIn && isConfigured()) {
-      pushEntry(plain).catch(e => console.warn('[diary] push error', e))
-    }
-  }
-
   async function addRecord(text: string, time?: string) {
     if (!text.trim()) return
     const e = await ensureEntry()
     const t = time || nowTime()
-    e.records.push({
-      id: crypto.randomUUID(),
-      time: t,
-      text: text.trim(),
-      period: getPeriod(parseTimeToDate(t)),
-    })
-    await save()
+    const id = crypto.randomUUID()
+    const now = Date.now()
+
+    await powerSyncDb.execute(
+      'INSERT INTO records (id, date, time, text, period, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, e.date, t, text.trim(), getPeriod(parseTimeToDate(t)), now, now]
+    )
+
+    e.records.push({ id, time: t, text: text.trim(), period: getPeriod(parseTimeToDate(t)) })
+    e.records.sort((a, b) => a.time.localeCompare(b.time))
+    e.updatedAt = now
   }
 
   async function updateRecord(id: string, updates: { text?: string; time?: string }) {
     if (!entry.value) return
     const r = entry.value.records.find(r => r.id === id)
     if (!r) return
-    if (updates.text !== undefined) r.text = updates.text.trim()
+    const now = Date.now()
+
+    let newTime = r.time
+    let newPeriod = r.period
     if (updates.time !== undefined) {
-      r.time = updates.time
-      r.period = getPeriod(parseTimeToDate(updates.time))
+      newTime = updates.time
+      newPeriod = getPeriod(parseTimeToDate(updates.time))
     }
-    await save()
+    const newText = updates.text !== undefined ? updates.text.trim() : r.text
+
+    await powerSyncDb.execute(
+      'UPDATE records SET text = ?, time = ?, period = ?, updated_at = ? WHERE id = ?',
+      [newText, newTime, newPeriod, now, id]
+    )
+
+    r.text = newText
+    r.time = newTime
+    r.period = newPeriod
+    entry.value.records.sort((a, b) => a.time.localeCompare(b.time))
+    entry.value.updatedAt = now
   }
 
   async function deleteRecord(id: string) {
     if (!entry.value) return
+    const now = Date.now()
+
+    await powerSyncDb.execute(
+      'UPDATE records SET deleted_at = ? WHERE id = ?',
+      [now, id]
+    )
+
     entry.value.records = entry.value.records.filter(r => r.id !== id)
-    await save()
+    entry.value.updatedAt = now
   }
 
   async function updateReflection(text: string) {
     const e = await ensureEntry()
+    const now = Date.now()
+
+    await powerSyncDb.execute(
+      `INSERT INTO reflections (date, text, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET text = EXCLUDED.text, updated_at = EXCLUDED.updated_at`,
+      [e.date, text, now]
+    )
+
     e.reflection = text
-    await save()
+    e.updatedAt = now
   }
 
   async function updateModuleData(moduleId: string, data: any) {
     const e = await ensureEntry()
+    const now = Date.now()
+    const dataStr = JSON.stringify(data)
+
+    const existing = await powerSyncDb.getOptional<{ id: string }>(
+      'SELECT id FROM modules WHERE date = ? AND module_id = ? AND deleted_at IS NULL',
+      [e.date, moduleId]
+    )
+
+    if (existing) {
+      await powerSyncDb.execute(
+        'UPDATE modules SET data = ?, updated_at = ? WHERE id = ?',
+        [dataStr, now, existing.id]
+      )
+    } else {
+      await powerSyncDb.execute(
+        'INSERT INTO modules (id, date, module_id, data, updated_at) VALUES (?, ?, ?, ?, ?)',
+        [crypto.randomUUID(), e.date, moduleId, dataStr, now]
+      )
+    }
+
     e.moduleData[moduleId] = data
-    await save()
+    e.updatedAt = now
   }
 
   const groupedRecords = computed(() => {
@@ -130,39 +243,25 @@ export const useDiaryStore = defineStore('diary', () => {
   })
 
   async function getDateList(): Promise<string[]> {
-    const all = await db.entries.orderBy('date').reverse().toArray()
-    return all.map(e => e.date)
+    const rows = await powerSyncDb.getAll<{ date: string }>(
+      `SELECT DISTINCT date FROM (
+        SELECT date FROM records WHERE deleted_at IS NULL
+        UNION SELECT date FROM reflections WHERE text != ''
+        UNION SELECT date FROM modules WHERE deleted_at IS NULL
+      ) ORDER BY date DESC`
+    )
+    return rows.map(r => r.date)
   }
 
-  async function syncNow(): Promise<SyncResult> {
-    if (!auth.isSignedIn || !isConfigured() || syncing.value) {
-      return { pulled: 0, pushed: 0, lastSyncAt: lastSyncAt.value }
-    }
-    syncing.value = true
-    try {
-      const res = await syncAll()
-      lastSyncAt.value = res.lastSyncAt
-      if (entry.value) {
-        const fresh = await db.entries.get(entry.value.date)
-        if (fresh) entry.value = fresh
-      }
-      return res
-    } finally {
-      syncing.value = false
-    }
-  }
-
-  async function pullFromCloud() {
-    if (!auth.isSignedIn || !isConfigured()) return
-    await syncNow()
+  function updateConnectionStatus() {
+    connected.value = powerSyncDb.currentStatus?.connected ?? false
   }
 
   return {
     currentDate,
     entry,
     groupedRecords,
-    syncing,
-    lastSyncAt,
+    connected,
     loadEntry,
     addRecord,
     updateRecord,
@@ -170,7 +269,6 @@ export const useDiaryStore = defineStore('diary', () => {
     updateReflection,
     updateModuleData,
     getDateList,
-    syncNow,
-    pullFromCloud,
+    updateConnectionStatus,
   }
 })

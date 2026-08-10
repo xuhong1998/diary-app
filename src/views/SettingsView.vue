@@ -26,16 +26,6 @@ const moduleIconConfig: Record<string, { bg: string; svg: string }> = {
   },
 }
 
-const lastSyncText = computed(() => {
-  if (!diary.lastSyncAt) return '从未'
-  const d = new Date(diary.lastSyncAt)
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  return `${mm}-${dd} ${hh}:${mi}`
-})
-
 const userIdentifier = computed(() => {
   const meta = auth.user?.user_metadata
   return meta?.user_name || meta?.full_name || auth.user?.email || '已登录'
@@ -44,17 +34,8 @@ const userIdentifier = computed(() => {
 const syncBannerText = computed(() => {
   if (!auth.configured) return '云同步未配置'
   if (!auth.isSignedIn) return '未登录'
-  return `已登录 · 最后同步 ${lastSyncText.value}`
+  return diary.connected ? '已连接 · 自动同步' : '离线模式'
 })
-
-async function doSync() {
-  const res = await diary.syncNow()
-  if (res.pulled || res.pushed) {
-    toast(`同步完成：拉取 ${res.pulled} 条，推送 ${res.pushed} 条`)
-  } else {
-    toast('已是最新')
-  }
-}
 
 async function doSignOut() {
   await auth.signOut()
@@ -128,7 +109,7 @@ async function doSignOut() {
             </div>
             <div class="row-content">
               <div class="row-title">{{ userIdentifier }}</div>
-              <div class="row-subtitle">最后同步：{{ lastSyncText }}</div>
+              <div class="row-subtitle">{{ diary.connected ? '自动同步中' : '离线' }}</div>
             </div>
             <div class="row-accessory">
               <button class="icon-btn danger" @click="doSignOut">
@@ -137,11 +118,6 @@ async function doSignOut() {
             </div>
           </div>
         </template>
-      </div>
-      <div v-if="auth.configured && auth.isSignedIn" style="padding:0 16px; margin-top:8px;">
-        <button class="ios-btn" :disabled="diary.syncing" @click="doSync">
-          {{ diary.syncing ? '同步中...' : '立即同步' }}
-        </button>
       </div>
     </div>
 
@@ -165,13 +141,13 @@ async function doSignOut() {
       <div class="list-group">
         <div class="list-row">
           <div class="row-content"><div class="row-title">版本</div></div>
-          <div class="row-accessory"><span class="row-subtitle">1.0.0</span></div>
+          <div class="row-accessory"><span class="row-subtitle">2.0.0</span></div>
         </div>
       </div>
     </div>
 
     <div class="list-footer" style="text-align:center;">
-      数据存储于浏览器（IndexedDB）<br>登录后自动云同步，可随时导出备份
+      数据存储于本地 SQLite（PowerSync）<br>登录后自动实时同步，支持离线
     </div>
   </div>
 </template>
