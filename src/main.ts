@@ -29,7 +29,7 @@ auth.init().then(async () => {
 
   try {
     powerSyncDb.registerListener({
-      onStatusChanged: (status: any) => {
+      onStatusChanged: (status: { connected?: boolean }) => {
         console.log('[powersync] status:', JSON.stringify(status))
         diary.updateConnectionStatus()
       },

@@ -55,7 +55,7 @@ export const useDiaryStore = defineStore('diary', () => {
         [date]
       )
 
-      const moduleData: Record<string, any> = {}
+      const moduleData: Record<string, unknown> = {}
       for (const m of modules) {
         moduleData[m.module_id] = parseModuleData(m.data)
       }
@@ -195,7 +195,7 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   }
 
-  async function updateModuleData(moduleId: string, data: any) {
+  async function updateModuleData(moduleId: string, data: unknown) {
     const e = await ensureEntry()
     const now = Date.now()
     const dataStr = serializeModuleData(data)

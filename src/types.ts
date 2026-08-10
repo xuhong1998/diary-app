@@ -11,7 +11,7 @@ export interface DiaryEntry {
   date: string
   records: DiaryRecord[]
   reflection: string
-  moduleData: Record<string, any>
+  moduleData: Record<string, unknown>
   createdAt: number
   updatedAt: number
 }

@@ -7,6 +7,6 @@ export interface DiaryModule {
   description: string
   mdSection: string
   isCore?: boolean
-  defaultData(): any
+  defaultData(): Record<string, unknown>
   component: Component
 }

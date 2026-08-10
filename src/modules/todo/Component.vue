@@ -14,7 +14,8 @@ onMounted(async () => {
 const todos = ref<TodoItem[]>([])
 
 function loadTodos() {
-  todos.value = store.entry?.moduleData?.todo?.items ?? []
+  const data = store.entry?.moduleData?.todo as { items?: TodoItem[] } | undefined
+  todos.value = data?.items ?? []
 }
 
 watch(() => store.entry, loadTodos, { immediate: true })

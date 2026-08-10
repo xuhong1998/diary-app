@@ -1,4 +1,4 @@
-import { PowerSyncDatabase, createConsoleLogger, LogLevels } from '@powersync/web'
+import { PowerSyncDatabase, createConsoleLogger, LogLevels, type AbstractPowerSyncDatabase } from '@powersync/web'
 import { AppSchema } from './schema'
 import { supabase } from './supabase'
 import { isSupabaseConfigured } from './supabase'
@@ -36,28 +36,28 @@ class BackendConnector {
     }
   }
 
-  async uploadData(database: any) {
+  async uploadData(database: AbstractPowerSyncDatabase) {
     const batch = await database.getCrudBatch()
     if (!batch) return
 
-    for (const op of batch.ops) {
+    for (const op of batch.crud) {
       const table = op.table
-      const row = op.opData
+      const row = op.opData ?? {}
       const now = Date.now()
 
-      if (op.opType === 'PUT') {
+      if (op.op === 'PUT') {
         const { error } = await supabase.from(table).upsert({
           ...row,
           updated_at: now,
         })
         if (error) throw error
-      } else if (op.opType === 'PATCH') {
+      } else if (op.op === 'PATCH') {
         const { error } = await supabase
           .from(table)
           .update({ ...row, updated_at: now })
           .eq('id', row.id)
         if (error) throw error
-      } else if (op.opType === 'DELETE') {
+      } else if (op.op === 'DELETE') {
         const { error } = await supabase.from(table).delete().eq('id', row.id)
         if (error) throw error
       }

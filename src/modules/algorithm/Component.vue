@@ -32,7 +32,8 @@ const newProblem = ref({
 })
 
 function loadProblems() {
-  problems.value = store.entry?.moduleData?.algorithm?.problems ?? []
+  const data = store.entry?.moduleData?.algorithm as { problems?: AlgorithmProblem[] } | undefined
+  problems.value = data?.problems ?? []
 }
 
 watch(() => store.entry, async () => {
