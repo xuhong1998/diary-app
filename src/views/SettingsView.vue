@@ -6,6 +6,10 @@ import { useDiaryStore } from '@/stores/diary'
 import { toast } from '@/utils/toast'
 import { useTheme } from '@/utils/theme'
 
+declare const __APP_VERSION__: string
+
+const appVersion = __APP_VERSION__
+
 const moduleStore = useModuleStore()
 const auth = useAuthStore()
 const diary = useDiaryStore()
@@ -141,7 +145,7 @@ async function doSignOut() {
       <div class="list-group">
         <div class="list-row">
           <div class="row-content"><div class="row-title">版本</div></div>
-          <div class="row-accessory"><span class="row-subtitle">2.0.0</span></div>
+          <div class="row-accessory"><span class="row-subtitle">{{ appVersion }}</span></div>
         </div>
       </div>
     </div>

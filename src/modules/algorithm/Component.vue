@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { powerSyncDb } from '@/db/powersync'
+import { formatDate, parseDate } from '@/utils/date'
 import { toast } from '@/utils/toast'
 import type { AlgorithmProblem } from '@/types'
 
@@ -70,17 +71,6 @@ async function loadStats() {
   }
 
   stats.value = { today, total, streak }
-}
-
-function parseDate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function formatDate(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
 }
 
 function prevDay() {

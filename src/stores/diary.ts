@@ -1,33 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { powerSyncDb } from '@/db/powersync'
+import { todayStr, nowTime, parseTimeToDate, getPeriod } from '@/utils/date'
 import type { DiaryEntry, DiaryRecord, Period } from '@/types'
 
-function todayStr(): string {
-  const d = new Date()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
-
-export function getPeriod(date = new Date()): Period {
-  const h = date.getHours()
-  if (h < 12) return 'morning'
-  if (h < 18) return 'afternoon'
-  return 'evening'
-}
-
-export function nowTime(): string {
-  const d = new Date()
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
-function parseTimeToDate(time: string): Date {
-  const [h, m] = time.split(':').map(Number)
-  const d = new Date()
-  d.setHours(h || 0, m || 0, 0, 0)
-  return d
-}
+export { nowTime } from '@/utils/date'
 
 interface RecordRow {
   id: string

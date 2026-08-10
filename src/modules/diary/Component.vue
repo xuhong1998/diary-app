@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useDiaryStore, nowTime } from '@/stores/diary'
+import { useDiaryStore } from '@/stores/diary'
+import { nowTime, formatDate, parseDate, normalizeTime } from '@/utils/date'
 import { toast } from '@/utils/toast'
 import { fetchWeatherData, getCachedWeather, getWeatherSvg, type WeatherData } from '@/utils/weather'
 import type { Period } from '@/types'
@@ -84,37 +85,6 @@ const heroWeekdayText = computed(() => {
 })
 
 const recordCount = computed(() => store.entry?.records.length ?? 0)
-
-function normalizeTime(input: string): string {
-  const cleaned = input.trim().replace(/：/g, ':').replace(/[^\d:]/g, '')
-  if (!cleaned) return nowTime()
-  let h: number, m: number
-  if (cleaned.includes(':')) {
-    const parts = cleaned.split(':')
-    h = parseInt(parts[0], 10)
-    m = parseInt(parts[1] || '0', 10)
-  } else if (cleaned.length <= 2) {
-    h = parseInt(cleaned, 10)
-    m = 0
-  } else {
-    h = parseInt(cleaned.slice(0, -2), 10)
-    m = parseInt(cleaned.slice(-2), 10)
-  }
-  h = Math.max(0, Math.min(23, h || 0))
-  m = Math.max(0, Math.min(59, m || 0))
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-}
-
-function parseDate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function formatDate(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
 
 function prevDay() {
   const d = parseDate(store.currentDate)

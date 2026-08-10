@@ -1,4 +1,5 @@
 import { powerSyncDb } from '@/db/powersync'
+import { formatDate } from '@/utils/date'
 import type { DiaryEntry } from '@/types'
 
 interface RecordRow {
@@ -103,10 +104,4 @@ export function downloadFile(content: string, filename: string) {
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
-}
-
-function formatDate(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
 }
