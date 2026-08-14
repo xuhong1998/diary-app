@@ -66,12 +66,21 @@ async function handleFile(e: Event) {
       }
 
       if (entry.reflection) {
-        await powerSyncDb.execute(
-          `INSERT INTO reflections (date, text, updated_at)
-           VALUES (?, ?, ?)
-           ON CONFLICT(date) DO UPDATE SET text = EXCLUDED.text, updated_at = EXCLUDED.updated_at`,
-          [entry.date, entry.reflection, Date.now()]
+        const existingRef = await powerSyncDb.getOptional<{ id: string }>(
+          'SELECT id FROM reflections WHERE date = ?',
+          [entry.date]
         )
+        if (existingRef) {
+          await powerSyncDb.execute(
+            'UPDATE reflections SET text = ?, updated_at = ? WHERE id = ?',
+            [entry.reflection, Date.now(), existingRef.id]
+          )
+        } else {
+          await powerSyncDb.execute(
+            'INSERT INTO reflections (id, date, text, updated_at) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), entry.date, entry.reflection, Date.now()]
+          )
+        }
       }
     }
 

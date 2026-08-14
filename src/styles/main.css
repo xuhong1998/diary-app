@@ -1431,6 +1431,35 @@ body {
   color: var(--label-quaternary);
 }
 
+.reflection-inline-editor {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  resize: none;
+  outline: none;
+}
+
+.reflection-inline-editor::placeholder { color: var(--label-tertiary); }
+
+.reflection-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.reflection-sheet {
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ============================================
    Login Page
    ============================================ */

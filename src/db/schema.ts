@@ -13,11 +13,15 @@ const records = new Table(
   { indexes: { by_date: ['date'] } }
 )
 
-const reflections = new Table({
-  date: column.text,
-  text: column.text,
-  updated_at: column.integer,
-})
+const reflections = new Table(
+  {
+    id: column.text,
+    date: column.text,
+    text: column.text,
+    updated_at: column.integer,
+  },
+  { indexes: { by_date: ['date'] } }
+)
 
 const modules = new Table(
   {

@@ -180,12 +180,22 @@ export const useDiaryStore = defineStore('diary', () => {
     const now = Date.now()
 
     try {
-      await powerSyncDb.execute(
-        `INSERT INTO reflections (date, text, updated_at)
-         VALUES (?, ?, ?)
-         ON CONFLICT(date) DO UPDATE SET text = EXCLUDED.text, updated_at = EXCLUDED.updated_at`,
-        [e.date, text, now]
+      const existing = await powerSyncDb.getOptional<{ id: string }>(
+        'SELECT id FROM reflections WHERE date = ?',
+        [e.date]
       )
+
+      if (existing) {
+        await powerSyncDb.execute(
+          'UPDATE reflections SET text = ?, updated_at = ? WHERE id = ?',
+          [text, now, existing.id]
+        )
+      } else {
+        await powerSyncDb.execute(
+          'INSERT INTO reflections (id, date, text, updated_at) VALUES (?, ?, ?, ?)',
+          [crypto.randomUUID(), e.date, text, now]
+        )
+      }
 
       e.reflection = text
       e.updatedAt = now

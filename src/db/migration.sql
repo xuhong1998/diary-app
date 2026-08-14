@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS records (
 CREATE INDEX IF NOT EXISTS idx_records_date ON records(date);
 
 CREATE TABLE IF NOT EXISTS reflections (
-  date text PRIMARY KEY,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date text NOT NULL UNIQUE,
   text text NOT NULL DEFAULT '',
   updated_at bigint NOT NULL DEFAULT (extract(epoch from now()) * 1000)::bigint,
   user_id uuid REFERENCES auth.users DEFAULT auth.uid()
@@ -72,5 +73,24 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'powersync') THEN
     CREATE PUBLICATION powersync FOR TABLE records, reflections, modules;
+  END IF;
+END $$;
+
+-- ============================================================
+-- 增量迁移: reflections 表加 id 列 (已有数据时执行)
+-- ============================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reflections' AND column_name = 'id'
+  ) THEN
+    ALTER TABLE reflections DROP CONSTRAINT reflections_pkey;
+    ALTER TABLE reflections ADD COLUMN id uuid DEFAULT gen_random_uuid();
+    UPDATE reflections SET id = gen_random_uuid();
+    ALTER TABLE reflections ALTER COLUMN id SET NOT NULL;
+    ALTER TABLE reflections ADD PRIMARY KEY (id);
+    ALTER TABLE reflections ADD CONSTRAINT reflections_date_key UNIQUE (date);
   END IF;
 END $$;

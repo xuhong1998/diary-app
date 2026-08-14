@@ -185,6 +185,10 @@ function startEditReflection() {
   reflectionSheetOpen.value = true
 }
 
+function cancelEditReflection() {
+  reflectionSheetOpen.value = false
+}
+
 async function saveReflection() {
   await store.updateReflection(reflectionText.value)
   reflectionSheetOpen.value = false
@@ -325,13 +329,13 @@ async function saveReflection() {
 
   <!-- Reflection Sheet -->
   <div class="sheet-overlay" :class="{ open: reflectionSheetOpen }" @click="reflectionSheetOpen = false"></div>
-  <div class="sheet" :class="{ open: reflectionSheetOpen }">
+  <div class="sheet reflection-sheet" :class="{ open: reflectionSheetOpen }">
     <div class="sheet-grabber"></div>
     <div class="sheet-title">写写今天的感悟</div>
-    <div class="sheet-body">
-      <textarea class="sheet-textarea" v-model="reflectionText" placeholder="今天有什么想说的..."></textarea>
+    <div class="sheet-body" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <textarea class="quick-add-editor" v-model="reflectionText" placeholder="今天有什么想说的..."></textarea>
       <div class="sheet-actions">
-        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="reflectionSheetOpen = false">取消</button>
+        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="cancelEditReflection">取消</button>
         <button class="ios-btn-sm" style="flex:1;" @click="saveReflection">保存</button>
       </div>
     </div>
