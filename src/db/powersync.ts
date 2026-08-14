@@ -45,21 +45,28 @@ class BackendConnector {
       const row = op.opData ?? {}
       const now = Date.now()
 
-      if (op.op === 'PUT') {
-        const { error } = await supabase.from(table).upsert({
-          ...row,
-          updated_at: now,
-        })
-        if (error) throw error
-      } else if (op.op === 'PATCH') {
-        const { error } = await supabase
-          .from(table)
-          .update({ ...row, updated_at: now })
-          .eq('id', op.id)
-        if (error) throw error
-      } else if (op.op === 'DELETE') {
-        const { error } = await supabase.from(table).delete().eq('id', op.id)
-        if (error) throw error
+      try {
+        if (op.op === 'PUT') {
+          const { error } = await supabase.from(table).upsert({
+            ...row,
+            updated_at: now,
+          })
+          if (error) throw error
+          console.log(`[powersync] PUT ${table} ok`)
+        } else if (op.op === 'PATCH') {
+          const { error } = await supabase
+            .from(table)
+            .update({ ...row, updated_at: now })
+            .eq('id', op.id)
+          if (error) throw error
+          console.log(`[powersync] PATCH ${table} id=${op.id} ok`)
+        } else if (op.op === 'DELETE') {
+          const { error } = await supabase.from(table).delete().eq('id', op.id)
+          if (error) throw error
+          console.log(`[powersync] DELETE ${table} id=${op.id} ok`)
+        }
+      } catch (e) {
+        console.error(`[powersync] upload ${op.op} ${table} id=${op.id} failed:`, e)
       }
     }
 
