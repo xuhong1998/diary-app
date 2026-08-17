@@ -104,7 +104,18 @@ src/
 │   ├── exporter.ts         # JSON 导出
 │   ├── theme.ts            # 深色模式
 │   └── toast.ts            # 全局 Toast
-└── styles/main.css         # 全局样式
+└── styles/                 # 全局样式（main.css 为 @import 入口）
+    ├── tokens.css          # 设计变量（浅色/深色）
+    ├── base.css            # reset / 应用布局
+    ├── nav.css             # 顶部导航栏
+    ├── ui.css              # 通用组件（列表/按钮/toggle 等）
+    ├── drawer.css          # 侧边抽屉
+    ├── diary.css           # 日记时间线 / 感悟
+    ├── algorithm.css       # 算法页 / 题目卡片
+    ├── sheet.css           # 底部弹窗
+    ├── login.css           # 登录页
+    ├── search.css          # 搜索结果
+    └── feedback.css        # toast / banner
 ```
 
 ## 功能模块

@@ -1,0 +1,477 @@
+/* ============================================
+   iOS Grouped List
+   ============================================ */
+.list-section {
+  margin-bottom: 8px;
+}
+
+.list-header {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--label-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 0 20px 6px;
+}
+
+.list-footer {
+  font-size: 13px;
+  color: var(--label-tertiary);
+  padding: 6px 20px 16px;
+  line-height: 1.4;
+}
+
+.list-group {
+  background: var(--bg-grouped);
+  border-radius: var(--radius-md);
+  margin: 0 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 44px;
+  position: relative;
+  cursor: pointer;
+}
+
+.list-row:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+.row-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.row-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.row-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-subtitle {
+  font-size: 13px;
+  color: var(--label-tertiary);
+  margin-top: 2px;
+}
+
+.row-accessory {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--label-tertiary);
+}
+
+/* ============================================
+   Search Bar
+   ============================================ */
+.search-bar {
+  margin: 0 16px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  background: var(--fill-quaternary);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 16px;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.search-input::placeholder {
+  color: var(--label-tertiary);
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 2px var(--ios-blue);
+}
+
+.time-input {
+  width: 64px;
+  background: var(--fill-quaternary);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 8px;
+  font-size: 15px;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  text-align: center;
+  outline: none;
+}
+
+/* ============================================
+   iOS Button
+   ============================================ */
+.ios-btn {
+  background: var(--ios-blue);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-stack);
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.ios-btn:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.ios-btn:disabled {
+  opacity: 0.4;
+}
+
+.ios-btn-secondary {
+  background: var(--fill-quaternary);
+  color: var(--ios-blue);
+}
+
+.ios-btn-sm {
+  padding: 8px 16px;
+  font-size: 15px;
+  border-radius: 10px;
+  width: auto;
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--ios-blue);
+  font-size: 15px;
+  font-family: var(--font-stack);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.text-btn.danger { color: var(--ios-red); }
+
+/* ============================================
+   Icon Buttons
+   ============================================ */
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ios-blue);
+  border-radius: 8px;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.icon-btn:active {
+  background: var(--fill-quaternary);
+  opacity: 0.6;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn.danger { color: var(--ios-red); }
+.icon-btn.muted { color: var(--label-tertiary); }
+
+/* ============================================
+   Floating Action Button (FAB)
+   ============================================ */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: calc(max(50% - var(--app-width) / 2, 16px) + 16px);
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--ios-blue);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4);
+  z-index: 90;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+.fab svg {
+  width: 26px;
+  height: 26px;
+}
+
+.fab.algo-fab {
+  background: var(--ios-orange);
+  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
+}
+
+@media (max-width: 499px) {
+  .fab {
+    right: 20px;
+  }
+}
+
+/* ============================================
+   Segmented Control
+   ============================================ */
+.segmented {
+  display: flex;
+  background: var(--fill-quaternary);
+  border-radius: 9px;
+  padding: 2px;
+  margin: 0 16px 16px;
+}
+
+.segmented-item {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-primary);
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.segmented-item.active {
+  background: var(--bg-grouped);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .segmented-item.active {
+  background: var(--bg-tertiary);
+}
+
+/* ============================================
+   Todo Record Item
+   ============================================ */
+.record-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-grouped);
+  position: relative;
+  min-height: 48px;
+}
+
+.record-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+/* ============================================
+   iOS Toggle Switch
+   ============================================ */
+.toggle {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: var(--label-quaternary);
+  transition: background 0.25s;
+}
+
+.toggle.on .toggle-track {
+  background: var(--ios-green);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle.on .toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ============================================
+   iOS Checkbox (Todo)
+   ============================================ */
+.check-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--label-quaternary);
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.check-circle.checked {
+  background: var(--ios-green);
+  border-color: var(--ios-green);
+}
+
+.check-circle svg {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.check-circle.checked svg {
+  opacity: 1;
+}
+
+.todo-text {
+  flex: 1;
+  font-size: 16px;
+  color: var(--label-primary);
+}
+
+.todo-text.done {
+  text-decoration: line-through;
+  color: var(--label-tertiary);
+}
+
+/* ============================================
+   Difficulty Badge
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-easy { background: rgba(52, 199, 89, 0.15); color: var(--ios-green); }
+.badge-medium { background: rgba(255, 149, 0, 0.15); color: var(--ios-orange); }
+.badge-hard { background: rgba(255, 59, 48, 0.15); color: var(--ios-red); }
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--fill-quaternary);
+  color: var(--label-secondary);
+}
+
+/* ============================================
+   Stats Pill
+   ============================================ */
+.stats-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--fill-quaternary);
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ios-blue);
+  margin: 0 16px 12px;
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-text {
+  font-size: 15px;
+  color: var(--label-tertiary);
+}
+
+/* ============================================
+   Spacing Helpers
+   ============================================ */
+.section-gap { height: 24px; }
+.page-pad { padding-top: 4px; }
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  margin-bottom: 6px;
+  margin-top: 8px;
+}
+
+.section-title-row .list-header {
+  padding: 0;
+}

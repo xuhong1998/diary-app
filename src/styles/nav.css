@@ -1,0 +1,76 @@
+/* ============================================
+   Navigation Bar (iOS Large Title)
+   ============================================ */
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(242, 242, 247, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--separator);
+  transition: background 0.3s;
+}
+
+[data-theme="dark"] .nav-bar {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.nav-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 0;
+}
+
+.nav-left {
+  width: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-menu-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--ios-blue);
+}
+
+.nav-menu-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 36px;
+  justify-content: flex-end;
+}
+
+.nav-icon-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--ios-blue);
+}
+
+.nav-icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-large-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  padding: 4px 16px 8px;
+  line-height: 1.1;
+}

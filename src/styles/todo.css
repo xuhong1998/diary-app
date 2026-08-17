@@ -1,0 +1,49 @@
+/* ============================================
+   Todo Module — 待办
+   ============================================ */
+
+/* Hero (green variant) */
+.todo-hero {
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--ios-green), #248A3D);
+  box-shadow: 0 8px 24px rgba(52, 199, 89, 0.25);
+}
+
+/* Completion progress inside hero */
+.todo-hero-progress {
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.todo-hero-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #fff;
+  transition: width 0.3s;
+}
+
+/* Add bar */
+.todo-add-bar {
+  margin: 0 16px 16px;
+}
+
+.todo-add-bar .search-input {
+  background: var(--bg-grouped);
+  box-shadow: var(--shadow-sm);
+}
+
+.todo-add-bar .ios-btn-sm {
+  padding: 9px 14px;
+}
+
+/* Todo rows */
+.todo-text {
+  line-height: 1.4;
+  padding: 4px 0;
+  word-break: break-word;
+}

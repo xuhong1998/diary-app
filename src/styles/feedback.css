@@ -1,0 +1,94 @@
+/* ============================================
+   Sync Banner
+   ============================================ */
+.sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(0, 122, 255, 0.08);
+  margin: 0 16px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--ios-blue);
+}
+
+/* ============================================
+   Tip Box
+   ============================================ */
+.tip-box {
+  margin: 0 16px;
+  padding: 14px 16px;
+  background: rgba(255, 149, 0, 0.08);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--label-secondary);
+  line-height: 1.5;
+}
+
+.tip-box code {
+  background: var(--fill-quaternary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* ============================================
+   Undo Banner
+   ============================================ */
+.undo-banner {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 999;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  animation: toast-fade 3s ease forwards;
+}
+
+.undo-action {
+  color: var(--ios-blue);
+  font-weight: 600;
+}
+
+/* ============================================
+   Global Toast
+   ============================================ */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-stack);
+  z-index: 999;
+  pointer-events: none;
+  animation: toast-fade 2s ease forwards;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+@keyframes toast-fade {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

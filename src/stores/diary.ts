@@ -205,15 +205,16 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   }
 
-  async function updateModuleData(moduleId: string, data: unknown) {
-    const e = await ensureEntry()
+  async function updateModuleData(moduleId: string, data: unknown, date?: string) {
+    const targetDate = date ?? currentDate.value
+    const e = targetDate === currentDate.value ? await ensureEntry() : null
     const now = Date.now()
     const dataStr = serializeModuleData(data)
 
     try {
       const existing = await powerSyncDb.getOptional<{ id: string }>(
         'SELECT id FROM modules WHERE date = ? AND module_id = ? AND deleted_at IS NULL',
-        [e.date, moduleId]
+        [targetDate, moduleId]
       )
 
       if (existing) {
@@ -224,12 +225,14 @@ export const useDiaryStore = defineStore('diary', () => {
       } else {
         await powerSyncDb.execute(
           'INSERT INTO modules (id, date, module_id, data, updated_at) VALUES (?, ?, ?, ?, ?)',
-          [crypto.randomUUID(), e.date, moduleId, dataStr, now]
+          [crypto.randomUUID(), targetDate, moduleId, dataStr, now]
         )
       }
 
-      e.moduleData[moduleId] = data
-      e.updatedAt = now
+      if (e) {
+        e.moduleData[moduleId] = data
+        e.updatedAt = now
+      }
     } catch (err) {
       console.error('[diary] updateModuleData failed:', err)
       throw err

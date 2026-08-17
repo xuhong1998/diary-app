@@ -1,0 +1,403 @@
+/* ============================================
+   Interview Module — 面试题
+   ============================================ */
+
+/* Hero (purple variant) */
+.iv-hero {
+  background: linear-gradient(135deg, var(--ios-purple), #8B3FD6);
+  box-shadow: 0 8px 24px rgba(175, 82, 222, 0.25);
+}
+
+/* Disabled trigger card */
+.add-trigger.is-disabled {
+  opacity: 0.55;
+}
+
+/* Category chips */
+.chip-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 12px;
+  scrollbar-width: none;
+}
+
+.chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--fill-quaternary);
+  color: var(--label-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-stack);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.chip:active {
+  opacity: 0.7;
+}
+
+.chip.active {
+  background: var(--ios-blue);
+  color: #fff;
+}
+
+/* Mastery variants on problem card */
+.problem-v2.m-new .problem-v2-header::before { background: var(--ios-blue); }
+.problem-v2.m-learning .problem-v2-header::before { background: var(--ios-orange); }
+.problem-v2.m-mastered .problem-v2-header::before { background: var(--ios-green); }
+
+/* Mastery badges */
+.badge-new { background: rgba(0, 122, 255, 0.15); color: var(--ios-blue); }
+.badge-learning { background: rgba(255, 149, 0, 0.15); color: var(--ios-orange); }
+.badge-mastered { background: rgba(52, 199, 89, 0.15); color: var(--ios-green); }
+
+/* Daily summary card */
+.summary-card {
+  margin: 0 16px 16px;
+  padding: 16px;
+  background: var(--bg-grouped);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.summary-card:active { transform: scale(0.98); }
+
+.summary-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--label-primary);
+  margin-bottom: 8px;
+}
+
+.summary-card-title svg {
+  color: var(--ios-blue);
+}
+
+.summary-card-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--label-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.summary-card-empty {
+  font-size: 14px;
+  color: var(--label-quaternary);
+}
+
+.summary-textarea {
+  min-height: 180px;
+}
+
+/* Stats block */
+.stats-block {
+  padding: 14px 16px;
+}
+
+.stats-block + .stats-block {
+  border-top: 0.5px solid var(--separator);
+}
+
+.stats-sub-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+}
+
+.stat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-row-label {
+  font-size: 13px;
+  color: var(--label-secondary);
+  width: 72px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--fill-quaternary);
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ios-blue);
+  transition: width 0.3s;
+}
+
+.stat-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-tertiary);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Mastery progress bar */
+.mastery-track {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--fill-quaternary);
+}
+
+.mastery-seg {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.mastery-seg.new { background: var(--ios-blue); }
+.mastery-seg.learning { background: var(--ios-orange); }
+.mastery-seg.mastered { background: var(--ios-green); }
+
+.mastery-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.mastery-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--label-tertiary);
+}
+
+.mastery-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mastery-dot.new { background: var(--ios-blue); }
+.mastery-dot.learning { background: var(--ios-orange); }
+.mastery-dot.mastered { background: var(--ios-green); }
+
+/* Detail sheet extras */
+.detail-next-review {
+  font-size: 12px;
+  color: var(--label-tertiary);
+  margin: 4px 0 12px;
+}
+
+/* ============================================
+   Review Sheet — 间隔复习
+   ============================================ */
+.review-sheet {
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 16px;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.review-progress {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-tertiary);
+}
+
+.review-card {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
+  margin-bottom: 16px;
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.review-topic {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--label-primary);
+  margin-bottom: 12px;
+}
+
+.review-recall {
+  font-size: 14px;
+  color: var(--label-tertiary);
+  text-align: center;
+  padding: 28px 0;
+}
+
+.review-reveal-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--fill-quaternary);
+  color: var(--ios-blue);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-stack);
+  cursor: pointer;
+}
+
+.review-reveal-btn:active {
+  opacity: 0.7;
+}
+
+/* Note inside review: no clamp, no cursor */
+.review-note {
+  max-height: none;
+  overflow: visible;
+  cursor: default;
+}
+
+/* Rating buttons */
+.rate-row {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.rate-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 0 10px;
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-stack);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.rate-btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.rate-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rate-btn.forgot { background: var(--ios-red); }
+.rate-btn.fuzzy { background: var(--ios-orange); }
+.rate-btn.good { background: var(--ios-green); }
+
+.rate-btn-sub {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* Review finished state */
+.review-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.review-done-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--ios-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.review-done-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.review-done-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--label-primary);
+  margin-bottom: 6px;
+}
+
+.review-done-sub {
+  font-size: 14px;
+  color: var(--label-tertiary);
+  margin-bottom: 24px;
+}
+
+.review-done-btn {
+  min-width: 160px;
+}

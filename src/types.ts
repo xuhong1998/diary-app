@@ -28,4 +28,19 @@ export interface AlgorithmProblem {
   note?: string
 }
 
+export interface InterviewItem {
+  id: string
+  topic: string
+  category: string
+  note: string
+  stage: number
+  nextReview: string
+  lastReview?: string
+}
+
+export interface InterviewModuleData {
+  items: InterviewItem[]
+  summary: string
+}
+
 export type { Component } from 'vue'

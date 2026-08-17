@@ -16,11 +16,16 @@ onMounted(async () => {
 const problems = ref<AlgorithmProblem[]>([])
 const algoSheetOpen = ref(false)
 const batchSheetOpen = ref(false)
+const detailOpen = ref(false)
+const detailIndex = ref<number | null>(null)
 const batchText = ref('')
 const batchDifficulty = ref<AlgorithmProblem['difficulty']>('medium')
 const editingIndex = ref<number | null>(null)
-const expandedNotes = ref<Set<number>>(new Set())
 const stats = ref({ today: 0, total: 0, streak: 0 })
+
+const detailProblem = computed(() =>
+  detailIndex.value !== null ? problems.value[detailIndex.value] ?? null : null
+)
 
 const isEditing = computed(() => editingIndex.value !== null)
 
@@ -144,19 +149,29 @@ async function saveProblem() {
   toast(wasEditing ? '已更新' : '已添加')
 }
 
+function openDetail(index: number) {
+  detailIndex.value = index
+  detailOpen.value = true
+}
+
+function editFromDetail() {
+  if (detailIndex.value === null) return
+  detailOpen.value = false
+  openEditSheet(detailIndex.value)
+}
+
+async function deleteFromDetail() {
+  if (detailIndex.value === null) return
+  detailOpen.value = false
+  await deleteProblem(detailIndex.value)
+  detailIndex.value = null
+}
+
 async function deleteProblem(index: number) {
   problems.value.splice(index, 1)
   await store.updateModuleData('algorithm', { problems: problems.value })
   await loadStats()
   toast('已删除')
-}
-
-function toggleNoteExpand(index: number) {
-  if (expandedNotes.value.has(index)) {
-    expandedNotes.value.delete(index)
-  } else {
-    expandedNotes.value.add(index)
-  }
 }
 
 const parsedProblems = computed(() => {
@@ -255,14 +270,15 @@ async function batchImport() {
       :key="i"
       class="problem-v2"
       :class="p.difficulty"
+      @click="openDetail(i)"
     >
       <div class="problem-v2-header">
         <span class="problem-v2-title">{{ p.title }}</span>
         <span class="badge" :class="'badge-' + p.difficulty">{{ difficultyLabels[p.difficulty] }}</span>
-        <button class="icon-btn" @click="openEditSheet(i)">
+        <button class="icon-btn" @click.stop="openEditSheet(i)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="icon-btn danger" @click="deleteProblem(i)">
+        <button class="icon-btn danger" @click.stop="deleteProblem(i)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </div>
@@ -271,13 +287,9 @@ async function batchImport() {
           <span v-for="t in p.tags" :key="t" class="tag-chip">{{ t }}</span>
         </div>
         <div v-if="p.note">
-          <div
-            class="note-block"
-            :class="{ expanded: expandedNotes.has(i) }"
-            @click="toggleNoteExpand(i)"
-          >{{ p.note }}</div>
-          <div v-if="p.note.length > 100" class="note-expand-hint" @click="toggleNoteExpand(i)">
-            {{ expandedNotes.has(i) ? '收起' : '展开' }}
+          <div class="note-block">{{ p.note }}</div>
+          <div v-if="p.note.length > 100" class="note-expand-hint">
+            查看全部 ›
           </div>
         </div>
       </div>
@@ -397,6 +409,43 @@ async function batchImport() {
         <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="batchSheetOpen = false">取消</button>
         <button class="ios-btn-sm" style="flex:1;" :disabled="!parsedProblems.length" @click="batchImport">导入 {{ parsedProblems.length || '' }} 题</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Problem Detail Sheet -->
+  <div class="sheet-overlay" :class="{ open: detailOpen }" @click="detailOpen = false"></div>
+  <div v-if="detailProblem" class="sheet detail-sheet" :class="[{ open: detailOpen }, detailProblem.difficulty]">
+    <div class="sheet-grabber"></div>
+    <div class="detail-close" @click="detailOpen = false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div class="detail-content">
+      <div class="detail-meta-row">
+        <span class="badge" :class="'badge-' + detailProblem.difficulty">{{ difficultyLabels[detailProblem.difficulty] }}</span>
+        <span class="detail-date">{{ dateDisplay }}</span>
+      </div>
+      <div class="detail-title">{{ detailProblem.title }}</div>
+      <div v-if="detailProblem.tags.length" class="detail-tags">
+        <span v-for="t in detailProblem.tags" :key="t" class="tag-chip">{{ t }}</span>
+      </div>
+      <div v-if="detailProblem.note" class="detail-note-section">
+        <div class="algo-field-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          解题思路
+        </div>
+        <div class="detail-note">{{ detailProblem.note }}</div>
+      </div>
+      <div v-else class="detail-note-empty">未记录解题思路</div>
+    </div>
+    <div class="detail-actions">
+      <button class="ios-btn-secondary ios-btn-sm" @click="editFromDetail">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        编辑
+      </button>
+      <button class="ios-btn-sm detail-delete-btn" @click="deleteFromDetail">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        删除
+      </button>
     </div>
   </div>
 </template>

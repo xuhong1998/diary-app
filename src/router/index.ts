@@ -28,6 +28,11 @@ const routes = [
     component: () => import('@/views/AlgorithmView.vue'),
   },
   {
+    path: '/interview',
+    name: 'interview',
+    component: () => import('@/views/InterviewView.vue'),
+  },
+  {
     path: '/export',
     name: 'export',
     component: () => import('@/views/ExportView.vue'),

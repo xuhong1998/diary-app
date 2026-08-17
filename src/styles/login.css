@@ -1,0 +1,61 @@
+/* ============================================
+   Login Page
+   ============================================ */
+.login-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
+
+.login-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--ios-blue), var(--ios-blue-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--label-primary);
+  margin-bottom: 8px;
+}
+
+.login-subtitle {
+  font-size: 15px;
+  color: var(--label-tertiary);
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.login-btn-wrap {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 16px;
+}
+
+.login-btn-wrap .ios-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-footer {
+  font-size: 12px;
+  color: var(--label-quaternary);
+  text-align: center;
+  margin-top: 16px;
+  max-width: 280px;
+  line-height: 1.5;
+}

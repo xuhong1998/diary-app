@@ -149,7 +149,7 @@ async function reverseGeocode(lat: number, lon: number, log: (msg: string) => vo
     log('天地图 TK 未配置，跳过逆地理(城市将无法识别，天气会回退默认城市)')
     return { city: '未知', adcode: '' }
   }
-  const ds = JSON.stringify({ keyWord: `${lon.toFixed(6)},${lat.toFixed(6)}` })
+  const ds = JSON.stringify({ lon: lon.toFixed(6), lat: lat.toFixed(6), ver: 1 })
   const url = `https://api.tianditu.gov.cn/geocoder?postStr=${encodeURIComponent(ds)}&type=geocode&tk=${TIANDITU_TK}`
   log(`逆地理请求: ${url}`)
   const res = await fetch(url)

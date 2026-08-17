@@ -1,0 +1,107 @@
+/* ============================================
+   Bottom Sheet (iOS Sheet)
+   ============================================ */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 300;
+  transition: opacity 0.3s;
+}
+
+.sheet-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 100%);
+  width: 100%;
+  max-width: var(--app-width);
+  background: var(--bg-secondary);
+  border-radius: 16px 16px 0 0;
+  z-index: 301;
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  padding: 0 20px env(safe-area-inset-bottom, 20px);
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sheet.open {
+  transform: translate(-50%, 0);
+}
+
+.sheet-grabber {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--label-quaternary);
+  margin: 8px auto 4px;
+}
+
+.sheet-title {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 0 16px;
+  color: var(--label-primary);
+}
+
+.sheet-body {
+  padding-bottom: 16px;
+}
+
+.sheet-textarea {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 16px;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  resize: none;
+  min-height: 120px;
+  outline: none;
+}
+
+.sheet-textarea::placeholder { color: var(--label-tertiary); }
+
+/* Quick Add full-height editor */
+.quick-add-sheet {
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.quick-add-editor {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-size: 16px;
+  line-height: 1.8;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+}
+
+.quick-add-editor::placeholder { color: var(--label-tertiary); }
+
+.sheet-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-bottom: 8px;
+}

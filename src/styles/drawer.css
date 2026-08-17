@@ -1,0 +1,131 @@
+/* ============================================
+   Sidebar Drawer
+   ============================================ */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+  transition: opacity 0.3s;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  max-width: 80%;
+  height: 100%;
+  background: var(--bg-secondary);
+  z-index: 201;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 60px 20px 20px;
+  background: linear-gradient(135deg, var(--ios-blue), var(--ios-blue-dark));
+  color: #fff;
+}
+
+.drawer-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.drawer-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.drawer-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.drawer-nav {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  cursor: pointer;
+  color: var(--label-primary);
+  transition: background 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-stack);
+  text-decoration: none;
+}
+
+.drawer-item:active {
+  background: var(--fill-quaternary);
+}
+
+.drawer-item.active {
+  color: var(--ios-blue);
+  font-weight: 600;
+}
+
+.drawer-item svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.drawer-item-label {
+  font-size: 17px;
+}
+
+.drawer-footer {
+  padding: 16px 20px 32px;
+  border-top: 0.5px solid var(--separator);
+}
+
+.drawer-sync {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--label-tertiary);
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ios-gray);
+}
+
+.sync-dot.active {
+  background: var(--ios-green);
+}
