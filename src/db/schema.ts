@@ -15,7 +15,6 @@ const records = new Table(
 
 const reflections = new Table(
   {
-    id: column.text,
     date: column.text,
     text: column.text,
     updated_at: column.integer,

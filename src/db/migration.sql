@@ -77,9 +77,12 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 增量迁移: reflections 表加 id 列 (已有数据时执行)
+-- 增量迁移: reflections 表加 id 列 (线上 date 为 PRIMARY KEY 时执行)
+-- 线上实际结构: date(text PK), text, updated_at, user_id —— 无 id 列
+-- 执行后需在 PowerSync Dashboard 更新 sync rules 并 redeploy
 -- ============================================================
 
+ALTER TABLE reflections DROP CONSTRAINT IF EXISTS reflections_date_key;
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -87,10 +90,16 @@ BEGIN
     WHERE table_name = 'reflections' AND column_name = 'id'
   ) THEN
     ALTER TABLE reflections DROP CONSTRAINT reflections_pkey;
-    ALTER TABLE reflections ADD COLUMN id uuid DEFAULT gen_random_uuid();
-    UPDATE reflections SET id = gen_random_uuid();
-    ALTER TABLE reflections ALTER COLUMN id SET NOT NULL;
+    ALTER TABLE reflections ADD COLUMN id uuid NOT NULL DEFAULT gen_random_uuid();
     ALTER TABLE reflections ADD PRIMARY KEY (id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'reflections_date_key' AND conrelid = 'reflections'::regclass
+  ) THEN
     ALTER TABLE reflections ADD CONSTRAINT reflections_date_key UNIQUE (date);
   END IF;
 END $$;

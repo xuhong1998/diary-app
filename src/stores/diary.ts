@@ -47,7 +47,7 @@ export const useDiaryStore = defineStore('diary', () => {
         [date]
       )
       const reflection = await powerSyncDb.getOptional<ReflectionRow>(
-        'SELECT * FROM reflections WHERE date = ?',
+        'SELECT * FROM reflections WHERE date = ? ORDER BY updated_at DESC LIMIT 1',
         [date]
       )
       const modules = await powerSyncDb.getAll<ModuleRow>(
@@ -181,7 +181,7 @@ export const useDiaryStore = defineStore('diary', () => {
 
     try {
       const existing = await powerSyncDb.getOptional<{ id: string }>(
-        'SELECT id FROM reflections WHERE date = ?',
+        'SELECT id FROM reflections WHERE date = ? ORDER BY updated_at DESC LIMIT 1',
         [e.date]
       )
 
