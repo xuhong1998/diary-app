@@ -2,18 +2,21 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { powerSyncDb } from '@/db/powersync'
-import { formatDate, parseDate } from '@/utils/date'
+import { formatDate, parseDate, todayStr } from '@/utils/date'
 import { parseModuleData } from '@/utils/moduleData'
 import { toast } from '@/utils/toast'
+import { applyReview, dueItems, initialReviewFields, masteryOf, nextReviewDate } from '@/utils/review'
+import type { Mastery, ReviewResult } from '@/utils/review'
 import type { AlgorithmProblem } from '@/types'
 
 const store = useDiaryStore()
 onMounted(async () => {
   await store.loadEntry(store.currentDate)
-  await loadStats()
+  await loadAll()
 })
 
 const problems = ref<AlgorithmProblem[]>([])
+const allEntries = ref<{ date: string; problems: AlgorithmProblem[] }[]>([])
 const algoSheetOpen = ref(false)
 const batchSheetOpen = ref(false)
 const detailOpen = ref(false)
@@ -21,11 +24,24 @@ const detailIndex = ref<number | null>(null)
 const batchText = ref('')
 const batchDifficulty = ref<AlgorithmProblem['difficulty']>('medium')
 const editingIndex = ref<number | null>(null)
-const stats = ref({ today: 0, total: 0, streak: 0 })
+
+const masteryLabels: Record<Mastery, string> = {
+  new: '新学',
+  learning: '巩固中',
+  mastered: '已掌握',
+}
+
+const reviewSheetOpen = ref(false)
+const reviewQueue = ref<{ item: AlgorithmProblem; date: string }[]>([])
+const reviewIndex = ref(0)
+const revealNote = ref(false)
+const reviewFinished = ref(false)
 
 const detailProblem = computed(() =>
   detailIndex.value !== null ? problems.value[detailIndex.value] ?? null : null
 )
+
+const currentReview = computed(() => reviewQueue.value[reviewIndex.value] ?? null)
 
 const isEditing = computed(() => editingIndex.value !== null)
 
@@ -43,38 +59,65 @@ function loadProblems() {
 
 watch(() => store.entry, async () => {
   loadProblems()
-  await loadStats()
+  await loadAll()
 }, { immediate: true })
 
-async function loadStats() {
-  const all = await powerSyncDb.getAll<{ date: string; data: string }>(
-    'SELECT date, data FROM modules WHERE module_id = ? AND deleted_at IS NULL',
-    ['algorithm']
-  )
-  const dateMap: Record<string, number> = {}
+const stats = computed(() => {
+  const t = todayStr()
   let total = 0
-  for (const m of all) {
-    const parsed = parseModuleData(m.data) as { problems?: AlgorithmProblem[] }
-    const count = parsed.problems?.length ?? 0
-    if (count > 0) {
-      total += count
-      dateMap[m.date] = count
+  const dateMap: Record<string, number> = {}
+  for (const e of allEntries.value) {
+    if (e.problems.length) {
+      total += e.problems.length
+      dateMap[e.date] = e.problems.length
     }
   }
-  const todayStr = formatDate(new Date())
-  const today = dateMap[todayStr] ?? 0
-
   let streak = 0
-  let check = new Date()
-  if (!dateMap[formatDate(check)]) {
-    check.setDate(check.getDate() - 1)
-  }
+  const check = new Date()
+  if (!dateMap[formatDate(check)]) check.setDate(check.getDate() - 1)
   while (dateMap[formatDate(check)]) {
     streak++
     check.setDate(check.getDate() - 1)
   }
+  return {
+    total,
+    today: dateMap[t] ?? 0,
+    due: dueItems(allEntries.value, t).length,
+    streak,
+  }
+})
 
-  stats.value = { today, total, streak }
+async function loadAll() {
+  try {
+    const rows = await powerSyncDb.getAll<{ date: string; data: string }>(
+      'SELECT date, data FROM modules WHERE module_id = ? AND deleted_at IS NULL',
+      ['algorithm']
+    )
+    const t = todayStr()
+    const entries: { date: string; problems: AlgorithmProblem[] }[] = []
+    const migrations: { date: string; problems: AlgorithmProblem[] }[] = []
+    for (const r of rows) {
+      const parsed = parseModuleData(r.data) as { problems?: AlgorithmProblem[] }
+      let list = parsed.problems ?? []
+      const outdated = list.some(p => !p.id || typeof p.stage !== 'number' || !p.nextReview)
+      if (outdated) {
+        list = list.map(p => ({
+          ...p,
+          id: p.id || crypto.randomUUID(),
+          stage: typeof p.stage === 'number' ? p.stage : 0,
+          nextReview: p.nextReview || nextReviewDate(0, t),
+        }))
+        migrations.push({ date: r.date, problems: list })
+      }
+      entries.push({ date: r.date, problems: list })
+    }
+    allEntries.value = entries
+    for (const m of migrations) {
+      await store.updateModuleData('algorithm', { problems: m.problems }, m.date)
+    }
+  } catch (e) {
+    console.error('[algorithm] loadAll failed:', e)
+  }
 }
 
 function prevDay() {
@@ -138,14 +181,15 @@ async function saveProblem() {
     note: newProblem.value.note.trim() || undefined,
   }
   if (wasEditing && editingIndex.value !== null) {
-    problems.value[editingIndex.value] = data
+    const idx = editingIndex.value
+    problems.value[idx] = { ...problems.value[idx], ...data }
   } else {
-    problems.value.push(data)
+    problems.value.push({ id: crypto.randomUUID(), ...data, ...initialReviewFields(todayStr()) })
   }
   await store.updateModuleData('algorithm', { problems: problems.value })
   algoSheetOpen.value = false
   editingIndex.value = null
-  await loadStats()
+  await loadAll()
   toast(wasEditing ? '已更新' : '已添加')
 }
 
@@ -170,7 +214,7 @@ async function deleteFromDetail() {
 async function deleteProblem(index: number) {
   problems.value.splice(index, 1)
   await store.updateModuleData('algorithm', { problems: problems.value })
-  await loadStats()
+  await loadAll()
   toast('已删除')
 }
 
@@ -180,12 +224,18 @@ const parsedProblems = computed(() => {
   const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
   return blocks.map(block => {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-    if (!lines.length) return null
-    const title = lines[0]
+    const title = lines[0] ?? ''
     const tags = lines[1] ? lines[1].split(/[,，\s]+/).filter(Boolean) : []
     const note = lines.slice(2).join('\n') || undefined
-    return { title, difficulty: batchDifficulty.value, tags, note }
-  }).filter(Boolean) as AlgorithmProblem[]
+    return {
+      id: crypto.randomUUID(),
+      title,
+      difficulty: batchDifficulty.value,
+      tags,
+      note,
+      ...initialReviewFields(todayStr()),
+    }
+  })
 })
 
 function openBatchSheet() {
@@ -205,8 +255,59 @@ async function batchImport() {
   await store.updateModuleData('algorithm', { problems: problems.value })
   batchSheetOpen.value = false
   batchText.value = ''
-  await loadStats()
+  await loadAll()
   toast(`已导入 ${parsed.length} 道题`)
+}
+
+function startReview() {
+  if (!stats.value.due) {
+    toast('今日没有待复习的题目')
+    return
+  }
+  reviewQueue.value = dueItems(allEntries.value, todayStr())
+  reviewIndex.value = 0
+  revealNote.value = false
+  reviewFinished.value = false
+  reviewSheetOpen.value = true
+}
+
+function reviewOne(p: AlgorithmProblem) {
+  reviewQueue.value = [{ item: p, date: store.currentDate }]
+  reviewIndex.value = 0
+  revealNote.value = false
+  reviewFinished.value = false
+  detailOpen.value = false
+  reviewSheetOpen.value = true
+}
+
+function skipReview() {
+  if (reviewIndex.value < reviewQueue.value.length - 1) {
+    reviewIndex.value++
+    revealNote.value = false
+  } else {
+    reviewFinished.value = true
+  }
+}
+
+async function rate(result: ReviewResult) {
+  const entry = currentReview.value
+  if (!entry) return
+  const updated = applyReview(entry.item, result, todayStr())
+
+  const target = allEntries.value.find(e => e.date === entry.date)
+  if (target) {
+    const nextProblems = target.problems.map(p => (p.id === updated.id ? updated : p))
+    if (entry.date === store.currentDate) problems.value = nextProblems
+    await store.updateModuleData('algorithm', { problems: nextProblems }, entry.date)
+    target.problems = nextProblems
+  }
+
+  if (reviewIndex.value < reviewQueue.value.length - 1) {
+    reviewIndex.value++
+    revealNote.value = false
+  } else {
+    reviewFinished.value = true
+  }
 }
 
 const searchKeyword = ref('')
@@ -251,12 +352,7 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
     await store.loadEntry(r.date)
     loadProblems()
   }
-  const { problem } = r
-  const index = problems.value.findIndex(p =>
-    p.title === problem.title &&
-    p.difficulty === problem.difficulty &&
-    (p.note ?? '') === (problem.note ?? '')
-  )
+  const index = problems.value.findIndex(p => p.id === r.problem.id)
   if (index !== -1) openDetail(index)
 }
 </script>
@@ -284,7 +380,24 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
           <div class="algo-stat-num">{{ stats.streak }}</div>
           <div class="algo-stat-label">连续天数</div>
         </div>
+        <div class="algo-stat-divider"></div>
+        <div class="algo-stat">
+          <div class="algo-stat-num">{{ stats.due }}</div>
+          <div class="algo-stat-label">待复习</div>
+        </div>
       </div>
+    </div>
+
+    <!-- Review Trigger Card -->
+    <div class="add-trigger" :class="{ 'is-disabled': !stats.due }" @click="startReview">
+      <div class="add-trigger-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.36-2.64L21 16M21 21v-5h-5"/></svg>
+      </div>
+      <div class="add-trigger-text">
+        <div class="add-trigger-title">复习 · 待复习 {{ stats.due }} 题</div>
+        <div class="add-trigger-sub">{{ stats.due ? '回顾到期题目，加深解题思路' : '今日没有到期的复习，继续加油' }}</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--label-quaternary)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- Search -->
@@ -334,8 +447,8 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
       </div>
 
       <div
-        v-for="(r, i) in searchResults"
-        :key="i"
+        v-for="r in searchResults"
+        :key="r.problem.id"
         class="problem-v2"
         :class="r.problem.difficulty"
         @click="openSearchResult(r)"
@@ -343,6 +456,7 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
         <div class="problem-v2-header">
           <span class="problem-v2-title">{{ r.problem.title }}</span>
           <span class="badge" :class="'badge-' + r.problem.difficulty">{{ difficultyLabels[r.problem.difficulty] }}</span>
+          <span class="badge" :class="'badge-' + masteryOf(r.problem)">{{ masteryLabels[masteryOf(r.problem)] }}</span>
         </div>
         <div class="problem-v2-body">
           <div class="algo-search-date">{{ r.date }}</div>
@@ -361,14 +475,15 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
     <template v-if="!searched">
     <div
       v-for="(p, i) in problems"
-      :key="i"
+      :key="p.id"
       class="problem-v2"
-      :class="p.difficulty"
+      :class="[p.difficulty, 'm-' + masteryOf(p)]"
       @click="openDetail(i)"
     >
       <div class="problem-v2-header">
         <span class="problem-v2-title">{{ p.title }}</span>
         <span class="badge" :class="'badge-' + p.difficulty">{{ difficultyLabels[p.difficulty] }}</span>
+        <span class="badge" :class="'badge-' + masteryOf(p)">{{ masteryLabels[masteryOf(p)] }}</span>
         <button class="icon-btn" @click.stop="openEditSheet(i)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
@@ -517,6 +632,7 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
     <div class="detail-content">
       <div class="detail-meta-row">
         <span class="badge" :class="'badge-' + detailProblem.difficulty">{{ difficultyLabels[detailProblem.difficulty] }}</span>
+        <span class="badge" :class="'badge-' + masteryOf(detailProblem)">{{ masteryLabels[masteryOf(detailProblem)] }}</span>
         <span class="detail-date">{{ dateDisplay }}</span>
       </div>
       <div class="detail-title">{{ detailProblem.title }}</div>
@@ -531,16 +647,67 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
         <div class="detail-note">{{ detailProblem.note }}</div>
       </div>
       <div v-else class="detail-note-empty">未记录解题思路</div>
+      <div class="detail-next-review">下次复习：{{ detailProblem.nextReview }}</div>
     </div>
     <div class="detail-actions">
       <button class="ios-btn-secondary ios-btn-sm" @click="editFromDetail">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         编辑
       </button>
+      <button class="ios-btn-sm" @click="reviewOne(detailProblem)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.36-2.64L21 16M21 21v-5h-5"/></svg>
+        立即复习
+      </button>
       <button class="ios-btn-sm detail-delete-btn" @click="deleteFromDetail">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         删除
       </button>
+    </div>
+  </div>
+
+  <!-- Review Sheet -->
+  <div class="sheet-overlay" :class="{ open: reviewSheetOpen }" @click="reviewSheetOpen = false"></div>
+  <div class="sheet review-sheet" :class="{ open: reviewSheetOpen }">
+    <div class="sheet-grabber"></div>
+
+    <div v-if="!reviewFinished && currentReview" class="review-body">
+      <div class="review-head">
+        <span class="review-progress">{{ reviewIndex + 1 }} / {{ reviewQueue.length }}</span>
+        <button class="text-btn" @click="skipReview">跳过</button>
+      </div>
+      <div class="review-card">
+        <div class="review-meta">
+          <span class="badge" :class="'badge-' + currentReview.item.difficulty">{{ difficultyLabels[currentReview.item.difficulty] }}</span>
+          <span class="badge" :class="'badge-' + masteryOf(currentReview.item)">{{ masteryLabels[masteryOf(currentReview.item)] }}</span>
+        </div>
+        <div class="review-topic">{{ currentReview.item.title }}</div>
+        <div v-if="!revealNote" class="review-recall">先在脑海里回想一下解题思路…</div>
+        <button v-if="!revealNote" class="review-reveal-btn" @click="revealNote = true">查看思路</button>
+        <template v-else>
+          <div v-if="currentReview.item.note" class="note-block review-note">{{ currentReview.item.note }}</div>
+          <div v-else class="detail-note-empty">未记录解题思路</div>
+        </template>
+      </div>
+      <div class="rate-row">
+        <button class="rate-btn forgot" :disabled="!revealNote" @click="rate('forgot')">
+          忘了<span class="rate-btn-sub">明天再来</span>
+        </button>
+        <button class="rate-btn fuzzy" :disabled="!revealNote" @click="rate('fuzzy')">
+          模糊<span class="rate-btn-sub">再巩固</span>
+        </button>
+        <button class="rate-btn good" :disabled="!revealNote" @click="rate('good')">
+          记住了<span class="rate-btn-sub">拉长间隔</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-else class="review-done">
+      <div class="review-done-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+      </div>
+      <div class="review-done-title">{{ reviewQueue.length > 1 ? '今日复习完成' : '复习完成' }}</div>
+      <div class="review-done-sub">按记忆曲线安排了下次复习时间</div>
+      <button class="ios-btn-sm review-done-btn" @click="reviewSheetOpen = false">完成</button>
     </div>
   </div>
 </template>

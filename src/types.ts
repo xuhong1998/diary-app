@@ -22,10 +22,14 @@ export interface TodoItem {
 }
 
 export interface AlgorithmProblem {
+  id: string
   title: string
   difficulty: 'easy' | 'medium' | 'hard'
   tags: string[]
   note?: string
+  stage: number
+  nextReview: string
+  lastReview?: string
 }
 
 export interface InterviewItem {
