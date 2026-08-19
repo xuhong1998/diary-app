@@ -486,3 +486,24 @@
   padding: 2px 8px;
   border-radius: 8px;
 }
+
+/* Search */
+.algo-search-bar {
+  margin-bottom: 16px;
+}
+
+.algo-search-date {
+  font-size: 12px;
+  color: var(--label-tertiary);
+  margin-bottom: 8px;
+}
+
+.algo-search-clear {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-family: var(--font-stack);
+  color: var(--ios-blue);
+  cursor: pointer;
+  padding: 4px 8px;
+}

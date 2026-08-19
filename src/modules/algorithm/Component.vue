@@ -208,6 +208,57 @@ async function batchImport() {
   await loadStats()
   toast(`已导入 ${parsed.length} 道题`)
 }
+
+const searchKeyword = ref('')
+const searchResults = ref<{ date: string; problem: AlgorithmProblem }[]>([])
+const searched = ref(false)
+
+watch(searchKeyword, (v) => {
+  if (!v.trim()) clearSearch()
+})
+
+async function doSearch() {
+  const kw = searchKeyword.value.trim().toLowerCase()
+  if (!kw) {
+    clearSearch()
+    return
+  }
+  const all = await powerSyncDb.getAll<{ date: string; data: string }>(
+    'SELECT date, data FROM modules WHERE module_id = ? AND deleted_at IS NULL',
+    ['algorithm']
+  )
+  const results: { date: string; problem: AlgorithmProblem }[] = []
+  for (const m of all) {
+    const parsed = parseModuleData(m.data) as { problems?: AlgorithmProblem[] }
+    for (const p of parsed.problems ?? []) {
+      const haystack = [p.title, ...(p.tags ?? []), p.note ?? ''].join(' ').toLowerCase()
+      if (haystack.includes(kw)) results.push({ date: m.date, problem: p })
+    }
+  }
+  results.sort((a, b) => b.date.localeCompare(a.date))
+  searchResults.value = results
+  searched.value = true
+}
+
+function clearSearch() {
+  searchKeyword.value = ''
+  searchResults.value = []
+  searched.value = false
+}
+
+async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) {
+  if (r.date !== store.currentDate) {
+    await store.loadEntry(r.date)
+    loadProblems()
+  }
+  const { problem } = r
+  const index = problems.value.findIndex(p =>
+    p.title === problem.title &&
+    p.difficulty === problem.difficulty &&
+    (p.note ?? '') === (problem.note ?? '')
+  )
+  if (index !== -1) openDetail(index)
+}
 </script>
 
 <template>
@@ -236,6 +287,17 @@ async function batchImport() {
       </div>
     </div>
 
+    <!-- Search -->
+    <div class="search-bar algo-search-bar">
+      <input
+        class="search-input"
+        v-model="searchKeyword"
+        placeholder="搜索题目、标签、解题思路..."
+        @keydown.enter="doSearch"
+      >
+      <button class="ios-btn-sm" :disabled="!searchKeyword.trim()" @click="doSearch">搜索</button>
+    </div>
+
     <!-- Add Trigger Card -->
     <div class="add-trigger" @click="openAlgoSheet">
       <div class="add-trigger-icon">
@@ -260,11 +322,43 @@ async function batchImport() {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--label-quaternary)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
+    <!-- Search Results -->
+    <template v-if="searched">
+      <div class="section-title-row">
+        <div class="list-header">搜索结果 · {{ searchResults.length }} 题</div>
+        <button class="algo-search-clear" @click="clearSearch">清除</button>
+      </div>
+
+      <div v-if="!searchResults.length" class="empty-state">
+        <div class="empty-text">没有找到相关题目</div>
+      </div>
+
+      <div
+        v-for="(r, i) in searchResults"
+        :key="i"
+        class="problem-v2"
+        :class="r.problem.difficulty"
+        @click="openSearchResult(r)"
+      >
+        <div class="problem-v2-header">
+          <span class="problem-v2-title">{{ r.problem.title }}</span>
+          <span class="badge" :class="'badge-' + r.problem.difficulty">{{ difficultyLabels[r.problem.difficulty] }}</span>
+        </div>
+        <div class="problem-v2-body">
+          <div class="algo-search-date">{{ r.date }}</div>
+          <div v-if="r.problem.tags.length" class="problem-v2-tags">
+            <span v-for="t in r.problem.tags" :key="t" class="tag-chip">{{ t }}</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- Problem List -->
-    <div v-if="problems.length" class="section-title-row">
+    <div v-if="problems.length && !searched" class="section-title-row">
       <div class="list-header">今日练习 · {{ problems.length }} 题</div>
     </div>
 
+    <template v-if="!searched">
     <div
       v-for="(p, i) in problems"
       :key="i"
@@ -296,9 +390,10 @@ async function batchImport() {
     </div>
 
     <!-- Empty state -->
-    <div v-if="!problems.length" class="empty-state">
+    <div v-if="!problems.length && !searched" class="empty-state">
       <div class="empty-text">还没有刷题记录</div>
     </div>
+    </template>
   </div>
 
   <!-- Algorithm Form Sheet -->
