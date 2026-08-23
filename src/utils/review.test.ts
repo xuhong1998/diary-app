@@ -6,6 +6,7 @@ import {
   applyReview,
   initialReviewFields,
   isDue,
+  markDueToday,
   masteryOf,
   dueItems,
 } from '@/utils/review'
@@ -105,6 +106,26 @@ describe('isDue', () => {
 
   it('not due in the future', () => {
     expect(isDue(makeItem({ nextReview: '2026-08-18' }), '2026-08-17')).toBe(false)
+  })
+})
+
+describe('markDueToday', () => {
+  it('sets nextReview to today keeping stage', () => {
+    const item = makeItem({ stage: 3, nextReview: '2026-09-01' })
+    const updated = markDueToday(item, '2026-08-17')
+    expect(updated.nextReview).toBe('2026-08-17')
+    expect(updated.stage).toBe(3)
+  })
+
+  it('does not mutate the original item', () => {
+    const item = makeItem({ nextReview: '2026-09-01' })
+    markDueToday(item, '2026-08-17')
+    expect(item.nextReview).toBe('2026-09-01')
+  })
+
+  it('becomes due via isDue', () => {
+    const item = makeItem({ nextReview: '2026-09-01' })
+    expect(isDue(markDueToday(item, '2026-08-17'), '2026-08-17')).toBe(true)
   })
 })
 

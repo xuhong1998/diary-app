@@ -3,9 +3,10 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { powerSyncDb } from '@/db/powersync'
 import { formatDate, parseDate, todayStr } from '@/utils/date'
+import { addDays } from '@/utils/review'
 import { parseModuleData } from '@/utils/moduleData'
 import { toast } from '@/utils/toast'
-import { applyReview, dueItems, initialReviewFields, masteryOf, nextReviewDate } from '@/utils/review'
+import { applyReview, initialReviewFields, isDue, masteryOf, nextReviewDate } from '@/utils/review'
 import type { Mastery, ReviewResult } from '@/utils/review'
 import type { AlgorithmProblem } from '@/types'
 
@@ -31,6 +32,7 @@ const masteryLabels: Record<Mastery, string> = {
   mastered: '已掌握',
 }
 
+const snoozeSheetOpen = ref(false)
 const reviewSheetOpen = ref(false)
 const reviewQueue = ref<{ item: AlgorithmProblem; date: string }[]>([])
 const reviewIndex = ref(0)
@@ -40,6 +42,11 @@ const reviewFinished = ref(false)
 const detailProblem = computed(() =>
   detailIndex.value !== null ? problems.value[detailIndex.value] ?? null : null
 )
+
+const detailDueToday = computed(() => {
+  const p = detailProblem.value
+  return p ? isDue(p, todayStr()) : false
+})
 
 const currentReview = computed(() => reviewQueue.value[reviewIndex.value] ?? null)
 
@@ -82,7 +89,7 @@ const stats = computed(() => {
   return {
     total,
     today: dateMap[t] ?? 0,
-    due: dueItems(allEntries.value, t).length,
+    due: algoDueItems().length,
     streak,
   }
 })
@@ -204,6 +211,29 @@ function editFromDetail() {
   openEditSheet(detailIndex.value)
 }
 
+async function markProblemDueToday(p: AlgorithmProblem) {
+  const updated: AlgorithmProblem = {
+    ...p,
+    id: p.id || crypto.randomUUID(),
+    stage: typeof p.stage === 'number' ? p.stage : 0,
+    nextReview: todayStr(),
+  }
+  const nextProblems = problems.value.map(x => (x === p || (p.id ? x.id === p.id : false) ? updated : x))
+  problems.value = nextProblems
+  await store.updateModuleData('algorithm', { problems: nextProblems })
+  await loadAll()
+  return updated
+}
+
+async function addToTodayReview(p: AlgorithmProblem) {
+  let updated = p
+  if (!isDue(p, todayStr())) {
+    updated = await markProblemDueToday(p)
+    toast('已加入今日复习')
+  }
+  startReviewAt(updated)
+}
+
 async function deleteFromDetail() {
   if (detailIndex.value === null) return
   detailOpen.value = false
@@ -259,12 +289,25 @@ async function batchImport() {
   toast(`已导入 ${parsed.length} 道题`)
 }
 
+/** 从所有日期条目中筛出今日待复习的题目（dueItems 期望 items 字段，此处为 problems） */
+function algoDueItems(): { item: AlgorithmProblem; date: string }[] {
+  const t = todayStr()
+  const due: { item: AlgorithmProblem; date: string }[] = []
+  for (const e of allEntries.value) {
+    for (const p of e.problems) {
+      if (isDue(p, t)) due.push({ item: p, date: e.date })
+    }
+  }
+  due.sort((a, b) => a.item.nextReview.localeCompare(b.item.nextReview))
+  return due
+}
+
 function startReview() {
   if (!stats.value.due) {
     toast('今日没有待复习的题目')
     return
   }
-  reviewQueue.value = dueItems(allEntries.value, todayStr())
+  reviewQueue.value = algoDueItems()
   reviewIndex.value = 0
   revealNote.value = false
   reviewFinished.value = false
@@ -278,6 +321,48 @@ function reviewOne(p: AlgorithmProblem) {
   reviewFinished.value = false
   detailOpen.value = false
   reviewSheetOpen.value = true
+}
+
+/** 打开完整待复习队列并定位到指定题目 */
+function startReviewAt(target: AlgorithmProblem) {
+  const queue = algoDueItems()
+  if (!queue.length) return
+  reviewQueue.value = queue
+  const idx = queue.findIndex(q => q.item.id === target.id)
+  reviewIndex.value = idx >= 0 ? idx : 0
+  revealNote.value = false
+  reviewFinished.value = false
+  detailOpen.value = false
+  reviewSheetOpen.value = true
+}
+
+/** 一键把所有待复习题目延后 N 天 */
+async function snoozeAllDue(days: number) {
+  const due = algoDueItems()
+  if (!due.length) return
+  const t = todayStr()
+  const nextDate = addDays(t, days)
+  const byDate = new Map<string, AlgorithmProblem[]>()
+  for (const { item, date } of due) {
+    const updated: AlgorithmProblem = { ...item, nextReview: nextDate }
+    const arr = byDate.get(date) ?? []
+    arr.push(updated)
+    byDate.set(date, arr)
+  }
+  for (const [date, updatedList] of byDate) {
+    const target = allEntries.value.find(e => e.date === date)
+    if (!target) continue
+    const nextProblems = target.problems.map(p => {
+      const found = updatedList.find(u => u.id === p.id)
+      return found ?? p
+    })
+    target.problems = nextProblems
+    if (date === store.currentDate) problems.value = nextProblems
+    await store.updateModuleData('algorithm', { problems: nextProblems }, date)
+  }
+  await loadAll()
+  snoozeSheetOpen.value = false
+  toast(`已将 ${due.length} 题延后 ${days} 天`)
 }
 
 function skipReview() {
@@ -397,6 +482,7 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
         <div class="add-trigger-title">复习 · 待复习 {{ stats.due }} 题</div>
         <div class="add-trigger-sub">{{ stats.due ? '回顾到期题目，加深解题思路' : '今日没有到期的复习，继续加油' }}</div>
       </div>
+      <button v-if="stats.due" class="text-btn snooze-trigger-btn" @click.stop="snoozeSheetOpen = true">一键延后</button>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--label-quaternary)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
@@ -484,6 +570,9 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
         <span class="problem-v2-title">{{ p.title }}</span>
         <span class="badge" :class="'badge-' + p.difficulty">{{ difficultyLabels[p.difficulty] }}</span>
         <span class="badge" :class="'badge-' + masteryOf(p)">{{ masteryLabels[masteryOf(p)] }}</span>
+        <button class="icon-btn review-add-btn" :class="{ 'is-due': isDue(p, todayStr()) }" :title="isDue(p, todayStr()) ? '已在今日复习' : '加入今日复习'" @click.stop="addToTodayReview(p)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
         <button class="icon-btn" @click.stop="openEditSheet(i)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
@@ -647,7 +736,14 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
         <div class="detail-note">{{ detailProblem.note }}</div>
       </div>
       <div v-else class="detail-note-empty">未记录解题思路</div>
-      <div class="detail-next-review">下次复习：{{ detailProblem.nextReview }}</div>
+      <div class="detail-next-review detail-review-row">
+        <span>下次复习：{{ detailProblem.nextReview }}</span>
+        <button v-if="!detailDueToday" class="text-btn detail-add-review-btn" @click="detailProblem && addToTodayReview(detailProblem)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          加入今日复习
+        </button>
+        <span v-else class="detail-review-due">已到期</span>
+      </div>
     </div>
     <div class="detail-actions">
       <button class="ios-btn-secondary ios-btn-sm" @click="editFromDetail">
@@ -708,6 +804,21 @@ async function openSearchResult(r: { date: string; problem: AlgorithmProblem }) 
       <div class="review-done-title">{{ reviewQueue.length > 1 ? '今日复习完成' : '复习完成' }}</div>
       <div class="review-done-sub">按记忆曲线安排了下次复习时间</div>
       <button class="ios-btn-sm review-done-btn" @click="reviewSheetOpen = false">完成</button>
+    </div>
+  </div>
+
+  <!-- Snooze All Sheet -->
+  <div class="sheet-overlay" :class="{ open: snoozeSheetOpen }" @click="snoozeSheetOpen = false"></div>
+  <div class="sheet snooze-sheet" :class="{ open: snoozeSheetOpen }">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-title">一键延后待复习</div>
+    <div class="sheet-body">
+      <div class="snooze-desc">将 {{ stats.due }} 道待复习题目的下次复习时间统一推迟，题目与进度保留。</div>
+      <div class="sheet-actions">
+        <button class="ios-btn-secondary ios-btn-sm" style="flex:1;" @click="snoozeSheetOpen = false">取消</button>
+        <button class="ios-btn-sm" style="flex:1;" @click="snoozeAllDue(7)">延后 7 天</button>
+        <button class="ios-btn-sm" style="flex:1;" @click="snoozeAllDue(30)">延后 30 天</button>
+      </div>
     </div>
   </div>
 </template>

@@ -4,6 +4,7 @@ import { builtinModules } from '@/modules/registry'
 import type { DiaryModule } from '@/modules/types'
 
 const STORAGE_KEY = 'diary-enabled-modules'
+const KNOWN_KEY = 'diary-known-modules'
 
 export const useModuleStore = defineStore('modules', () => {
   const modules = ref<DiaryModule[]>(builtinModules)
@@ -12,7 +13,24 @@ export const useModuleStore = defineStore('modules', () => {
   function loadEnabled(): Set<string> {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) return new Set(JSON.parse(raw))
+      if (raw) {
+        const saved = new Set<string>(JSON.parse(raw))
+        const knownRaw = localStorage.getItem(KNOWN_KEY)
+        const known = new Set<string>(knownRaw ? JSON.parse(knownRaw) : [...saved])
+        let changed = false
+        for (const m of modules.value) {
+          if (!known.has(m.id)) {
+            known.add(m.id)
+            saved.add(m.id)
+            changed = true
+          }
+        }
+        if (changed) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...saved]))
+          localStorage.setItem(KNOWN_KEY, JSON.stringify([...known]))
+        }
+        return saved
+      }
     } catch {}
     return new Set(modules.value.map(m => m.id))
   }

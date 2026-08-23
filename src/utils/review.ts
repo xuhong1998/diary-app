@@ -46,6 +46,11 @@ export function applyReview<T extends Reviewable>(item: T, result: ReviewResult,
   }
 }
 
+/** 将条目加入今日复习：nextReview 置为今天，stage 保持不变（纯函数） */
+export function markDueToday<T extends Reviewable>(item: T, today: string): T {
+  return { ...item, nextReview: today }
+}
+
 /** 新建条目的初始复习字段：stage 0，明天到期 */
 export function initialReviewFields(today: string): Pick<Reviewable, 'stage' | 'nextReview'> {
   return { stage: 0, nextReview: nextReviewDate(0, today) }

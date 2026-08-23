@@ -122,8 +122,10 @@ export async function connectPowerSync() {
   }
   connector ??= new BackendConnector()
   console.log('[powersync] connecting...')
-  await powerSyncDb.connect(connector)
-  console.log('[powersync] connected')
+  powerSyncDb
+    .connect(connector)
+    .then(() => console.log('[powersync] connected'))
+    .catch((e) => console.error('[powersync] connect failed:', e))
 }
 
 export async function disconnectPowerSync() {

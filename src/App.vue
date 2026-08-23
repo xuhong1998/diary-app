@@ -16,6 +16,7 @@ const { theme, toggleTheme } = useTheme()
 
 const navIcons: Record<string, string> = {
   diary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 4v16M4 8h4"/></svg>',
+  checkin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
   todo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
   algorithm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8l3 3-3 3M14 8v6"/></svg>',
   interview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
@@ -28,6 +29,9 @@ const navItems = computed(() => {
   const items = [
     { to: '/diary', icon: 'diary', label: '日记' },
   ]
+  if (moduleStore.isEnabled('checkin')) {
+    items.push({ to: '/checkin', icon: 'checkin', label: '打卡' })
+  }
   if (moduleStore.isEnabled('todo')) {
     items.push({ to: '/todo', icon: 'todo', label: '待办' })
   }

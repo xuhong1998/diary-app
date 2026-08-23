@@ -18,6 +18,11 @@ const routes = [
     component: () => import('@/views/DiaryView.vue'),
   },
   {
+    path: '/checkin',
+    name: 'checkin',
+    component: () => import('@/views/CheckinView.vue'),
+  },
+  {
     path: '/todo',
     name: 'todo',
     component: () => import('@/views/TodoView.vue'),

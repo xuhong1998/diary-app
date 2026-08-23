@@ -47,4 +47,25 @@ export interface InterviewModuleData {
   summary: string
 }
 
+export type CheckinKind = 'build' | 'quit'
+
+export interface CheckinItem {
+  id: string
+  name: string
+  icon: string
+  kind: CheckinKind
+  active: boolean
+  createdAt: string
+}
+
+export interface CheckinCheck {
+  v: 0 | 1
+  at: string
+}
+
+export interface CheckinModuleData {
+  items: CheckinItem[]
+  checks: Record<string, CheckinCheck>
+}
+
 export type { Component } from 'vue'

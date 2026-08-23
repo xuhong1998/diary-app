@@ -3,6 +3,7 @@ import TodoComponent from './todo/Component.vue'
 import AlgorithmComponent from './algorithm/Component.vue'
 import InterviewComponent from './interview/Component.vue'
 import DiaryComponent from './diary/Component.vue'
+import CheckinComponent from './checkin/Component.vue'
 
 export const builtinModules: DiaryModule[] = [
   {
@@ -14,6 +15,15 @@ export const builtinModules: DiaryModule[] = [
     isCore: true,
     defaultData: () => ({}),
     component: DiaryComponent,
+  },
+  {
+    id: 'checkin',
+    name: '打卡',
+    icon: '📌',
+    description: '自定义每日打卡，追踪习惯连续性',
+    mdSection: '每日打卡',
+    defaultData: () => ({ items: [], checks: {} }),
+    component: CheckinComponent,
   },
   {
     id: 'todo',

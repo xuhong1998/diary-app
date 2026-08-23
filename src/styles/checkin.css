@@ -1,0 +1,323 @@
+/* ============================================
+   Checkin Module — 每日打卡
+   ============================================ */
+
+/* Hero (blue variant) */
+.checkin-hero {
+  background: linear-gradient(135deg, var(--ios-blue), #5856D6);
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.25);
+}
+
+.ci-today-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: 2px;
+}
+
+/* Check rows */
+.ci-row {
+  align-items: center;
+}
+
+.ci-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--fill-quaternary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ci-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ci-name {
+  font-size: 16px;
+  color: var(--label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ci-name.struck {
+  text-decoration: line-through;
+  color: var(--label-tertiary);
+}
+
+.ci-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ci-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ci-kind.build {
+  background: rgba(52, 199, 89, 0.14);
+  color: var(--ios-green);
+}
+
+.ci-kind.quit {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--ios-red);
+}
+
+.ci-time {
+  font-size: 12px;
+  color: var(--ios-green);
+}
+
+.ci-hint {
+  font-size: 12px;
+  color: var(--label-tertiary);
+}
+
+/* Quit (violated) marker button */
+.ci-quit-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--label-quaternary);
+  background: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.ci-quit-btn svg {
+  width: 12px;
+  height: 12px;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.ci-quit-btn.violated {
+  background: var(--ios-red);
+  border-color: var(--ios-red);
+}
+
+.ci-quit-btn.violated svg {
+  opacity: 1;
+}
+
+/* Preset chips */
+.ci-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 16px 8px;
+}
+
+.ci-preset {
+  background: var(--bg-grouped);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-stack);
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ci-preset:active {
+  transform: scale(0.96);
+  opacity: 0.7;
+}
+
+.ci-preset.added {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.empty-presets {
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Manage form */
+.ci-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ci-form .search-input {
+  background: var(--fill-quaternary);
+}
+
+.ci-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ci-emoji {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  border: 2px solid transparent;
+  background: var(--fill-quaternary);
+  font-size: 19px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.ci-emoji.selected {
+  border-color: var(--ios-blue);
+  background: rgba(0, 122, 255, 0.1);
+}
+
+.ci-kind-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.ci-kind-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 0;
+  border-radius: 10px;
+  background: var(--fill-quaternary);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ci-kind-option.selected {
+  border-color: var(--ios-blue);
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.ci-kind-desc {
+  font-size: 12px;
+  color: var(--label-tertiary);
+}
+
+.ci-save-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 15px;
+}
+
+/* Manage rows */
+.ci-manage-row {
+  align-items: center;
+}
+
+.ci-manage-row.archived .ci-icon,
+.ci-manage-row.archived .ci-name {
+  opacity: 0.45;
+}
+
+/* Stats cards */
+.ci-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 16px 8px;
+}
+
+.ci-stat-card {
+  background: var(--bg-grouped);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+
+.ci-stat-card.archived {
+  opacity: 0.55;
+}
+
+.ci-stat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ci-stat-head .ci-name {
+  flex: 1;
+}
+
+.ci-streak {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ios-orange);
+}
+
+.ci-dots {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ci-dot-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ci-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--fill-quaternary);
+}
+
+.ci-dot.done {
+  background: var(--ios-green);
+}
+
+.ci-dot.fail {
+  background: var(--ios-red);
+}
+
+.ci-dot.today {
+  box-shadow: 0 0 0 2px var(--bg-grouped), 0 0 0 4px var(--ios-blue);
+}
+
+.ci-dot-label {
+  font-size: 10px;
+  color: var(--label-tertiary);
+}
+
+.ci-stat-foot {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--label-tertiary);
+}
