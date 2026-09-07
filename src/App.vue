@@ -35,14 +35,14 @@ const navItems = computed(() => {
   if (moduleStore.isEnabled('todo')) {
     items.push({ to: '/todo', icon: 'todo', label: '待办' })
   }
+  if (moduleStore.isEnabled('pomodoro')) {
+    items.push({ to: '/pomodoro', icon: 'pomodoro', label: '番茄钟' })
+  }
   if (moduleStore.isEnabled('algorithm')) {
     items.push({ to: '/algorithm', icon: 'algorithm', label: '算法' })
   }
   if (moduleStore.isEnabled('interview')) {
     items.push({ to: '/interview', icon: 'interview', label: '面试题' })
-  }
-  if (moduleStore.isEnabled('pomodoro')) {
-    items.push({ to: '/pomodoro', icon: 'pomodoro', label: '番茄钟' })
   }
   items.push({ to: '/export', icon: 'export', label: '导出' })
   items.push({ to: '/search', icon: 'search', label: '搜索' })

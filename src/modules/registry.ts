@@ -1,9 +1,9 @@
 import type { DiaryModule } from './types'
 import TodoComponent from './todo/Component.vue'
+import PomodoroComponent from './pomodoro/Component.vue'
 import AlgorithmComponent from './algorithm/Component.vue'
 import InterviewComponent from './interview/Component.vue'
 import DiaryComponent from './diary/Component.vue'
-import PomodoroComponent from './pomodoro/Component.vue'
 
 export const builtinModules: DiaryModule[] = [
   {
@@ -26,6 +26,15 @@ export const builtinModules: DiaryModule[] = [
     component: TodoComponent,
   },
   {
+    id: 'pomodoro',
+    name: '番茄钟',
+    icon: '🍅',
+    description: '专注计时，关联待办，追踪专注统计',
+    mdSection: '番茄钟',
+    defaultData: () => ({ sessions: [] }),
+    component: PomodoroComponent,
+  },
+  {
     id: 'algorithm',
     name: '算法',
     icon: '🧮',
@@ -42,14 +51,5 @@ export const builtinModules: DiaryModule[] = [
     mdSection: '面试题',
     defaultData: () => ({ items: [], summary: '' }),
     component: InterviewComponent,
-  },
-  {
-    id: 'pomodoro',
-    name: '番茄钟',
-    icon: '🍅',
-    description: '专注计时，关联待办，追踪专注统计',
-    mdSection: '番茄钟',
-    defaultData: () => ({ sessions: [] }),
-    component: PomodoroComponent,
   },
 ]
