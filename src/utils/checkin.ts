@@ -20,8 +20,8 @@ export const CHECKIN_PRESETS: { name: string; icon: string; kind: CheckinKind }[
 ]
 
 export const CHECKIN_ICONS = [
-  '😴', '⏰', '🏃', '📖', '💧', '🥗', '🧘', '💪',
-  '📚', '☀️', '🎸', '🀄', '📱', '🧋', '🍺', '🌙',
+  '🔁', '😴', '⏰', '🏃', '📖', '💧', '🥗', '🧘',
+  '💪', '📚', '☀️', '🎸', '🀄', '📱', '🧋', '🍺', '🌙',
 ]
 
 export function parseCheckinData(raw: unknown): { items: CheckinItem[]; checks: Record<string, CheckinCheck> } {

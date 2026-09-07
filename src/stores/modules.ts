@@ -17,6 +17,14 @@ export const useModuleStore = defineStore('modules', () => {
         const saved = new Set<string>(JSON.parse(raw))
         const knownRaw = localStorage.getItem(KNOWN_KEY)
         const known = new Set<string>(knownRaw ? JSON.parse(knownRaw) : [...saved])
+        // 打卡已并入待办：迁移老用户启用状态，避免曾禁用待办的人合并后丢失入口
+        if (saved.has('checkin')) {
+          if (!saved.has('todo')) saved.add('todo')
+          saved.delete('checkin')
+          known.delete('checkin')
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...saved]))
+          localStorage.setItem(KNOWN_KEY, JSON.stringify([...known]))
+        }
         let changed = false
         for (const m of modules.value) {
           if (!known.has(m.id)) {

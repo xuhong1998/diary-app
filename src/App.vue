@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useModuleStore } from '@/stores/modules'
 import { useAuthStore } from '@/stores/auth'
 import { useDiaryStore } from '@/stores/diary'
+import { usePomodoroStore } from '@/stores/pomodoro'
 import { useRoute } from 'vue-router'
 import { toastMessage } from '@/utils/toast'
 import { useTheme } from '@/utils/theme'
@@ -10,16 +11,18 @@ import { useTheme } from '@/utils/theme'
 const moduleStore = useModuleStore()
 const auth = useAuthStore()
 const diary = useDiaryStore()
+// 应用启动即实例化番茄钟 store：刷新后无论停留在哪个页面，都能恢复/补记计时
+usePomodoroStore()
 const route = useRoute()
 const drawerOpen = ref(false)
 const { theme, toggleTheme } = useTheme()
 
 const navIcons: Record<string, string> = {
   diary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 4v16M4 8h4"/></svg>',
-  checkin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
   todo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
   algorithm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8l3 3-3 3M14 8v6"/></svg>',
   interview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
+  pomodoro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/><path d="M9 2h6"/><line x1="12" y1="2" x2="12" y2="5"/></svg>',
   export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
@@ -29,9 +32,6 @@ const navItems = computed(() => {
   const items = [
     { to: '/diary', icon: 'diary', label: '日记' },
   ]
-  if (moduleStore.isEnabled('checkin')) {
-    items.push({ to: '/checkin', icon: 'checkin', label: '打卡' })
-  }
   if (moduleStore.isEnabled('todo')) {
     items.push({ to: '/todo', icon: 'todo', label: '待办' })
   }
@@ -40,6 +40,9 @@ const navItems = computed(() => {
   }
   if (moduleStore.isEnabled('interview')) {
     items.push({ to: '/interview', icon: 'interview', label: '面试题' })
+  }
+  if (moduleStore.isEnabled('pomodoro')) {
+    items.push({ to: '/pomodoro', icon: 'pomodoro', label: '番茄钟' })
   }
   items.push({ to: '/export', icon: 'export', label: '导出' })
   items.push({ to: '/search', icon: 'search', label: '搜索' })

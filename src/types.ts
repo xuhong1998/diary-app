@@ -17,6 +17,7 @@ export interface DiaryEntry {
 }
 
 export interface TodoItem {
+  id?: string
   text: string
   done: boolean
 }
@@ -66,6 +67,20 @@ export interface CheckinCheck {
 export interface CheckinModuleData {
   items: CheckinItem[]
   checks: Record<string, CheckinCheck>
+}
+
+export type PomodoroPhase = 'focus' | 'break' | 'longBreak'
+
+export interface PomodoroSession {
+  id: string
+  modeId: string
+  startedAt: string
+  endedAt: string
+  seconds: number
+  plannedSec: number
+  completed: boolean
+  todoId?: string
+  todoText?: string
 }
 
 export type { Component } from 'vue'

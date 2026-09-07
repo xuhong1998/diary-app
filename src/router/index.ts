@@ -19,8 +19,7 @@ const routes = [
   },
   {
     path: '/checkin',
-    name: 'checkin',
-    component: () => import('@/views/CheckinView.vue'),
+    redirect: '/todo',
   },
   {
     path: '/todo',
@@ -36,6 +35,11 @@ const routes = [
     path: '/interview',
     name: 'interview',
     component: () => import('@/views/InterviewView.vue'),
+  },
+  {
+    path: '/pomodoro',
+    name: 'pomodoro',
+    component: () => import('@/views/PomodoroView.vue'),
   },
   {
     path: '/export',

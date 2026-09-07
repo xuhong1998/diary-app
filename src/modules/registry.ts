@@ -3,7 +3,7 @@ import TodoComponent from './todo/Component.vue'
 import AlgorithmComponent from './algorithm/Component.vue'
 import InterviewComponent from './interview/Component.vue'
 import DiaryComponent from './diary/Component.vue'
-import CheckinComponent from './checkin/Component.vue'
+import PomodoroComponent from './pomodoro/Component.vue'
 
 export const builtinModules: DiaryModule[] = [
   {
@@ -17,19 +17,10 @@ export const builtinModules: DiaryModule[] = [
     component: DiaryComponent,
   },
   {
-    id: 'checkin',
-    name: '打卡',
-    icon: '📌',
-    description: '自定义每日打卡，追踪习惯连续性',
-    mdSection: '每日打卡',
-    defaultData: () => ({ items: [], checks: {} }),
-    component: CheckinComponent,
-  },
-  {
     id: 'todo',
     name: '待办',
     icon: '✅',
-    description: '早上写待办，晚上查看完成情况',
+    description: '当日待办与每日打卡',
     mdSection: '待办',
     defaultData: () => ({ items: [] }),
     component: TodoComponent,
@@ -51,5 +42,14 @@ export const builtinModules: DiaryModule[] = [
     mdSection: '面试题',
     defaultData: () => ({ items: [], summary: '' }),
     component: InterviewComponent,
+  },
+  {
+    id: 'pomodoro',
+    name: '番茄钟',
+    icon: '🍅',
+    description: '专注计时，关联待办，追踪专注统计',
+    mdSection: '番茄钟',
+    defaultData: () => ({ sessions: [] }),
+    component: PomodoroComponent,
   },
 ]
