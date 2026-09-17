@@ -47,16 +47,13 @@ auth.init().then(async () => {
     }
   )
 
-  try {
-    powerSyncDb.registerListener({
-      onStatusChanged: (status: { connected?: boolean }) => {
-        console.log('[powersync] status:', JSON.stringify(status))
-        diary.updateConnectionStatus()
-      },
-    })
-  } catch (e) {
-    console.error('[main] registerListener failed:', e)
-  }
+  // @powersync/web 2.x 监听器回调名为 statusChanged（旧版为 onStatusChanged，已失效）
+  powerSyncDb.registerListener({
+    statusChanged: (status) => {
+      console.log('[powersync] status:', status.getMessage?.() ?? '', '| connected:', status.connected)
+      diary.updateConnectionStatus()
+    },
+  })
   diary.updateConnectionStatus()
 
   app.use(router)
