@@ -1,10 +1,10 @@
-import { createApp } from 'vue'
+import { createApp, watch } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { useDiaryStore } from './stores/diary'
-import { connectPowerSync, powerSyncDb } from './db/powersync'
+import { connectPowerSync, disconnectPowerSync, powerSyncDb } from './db/powersync'
 import './styles/main.css'
 
 const app = createApp(App)
@@ -26,6 +26,26 @@ auth.init().then(async () => {
   } catch (e) {
     console.error('[main] PowerSync init failed:', e)
   }
+
+  // 登录状态变化时重连/断开 PowerSync：
+  // connectPowerSync 只在启动时调用一次，App 内重新登录后 SDK 不会自动重连，
+  // 导致登录成功后仍显示"离线"、本地数据无法上传
+  watch(
+    () => auth.isSignedIn,
+    async (signedIn) => {
+      try {
+        if (signedIn) {
+          console.log('[main] signed in, reconnecting PowerSync...')
+          await connectPowerSync()
+        } else {
+          console.log('[main] signed out, disconnecting PowerSync...')
+          await disconnectPowerSync()
+        }
+      } catch (e) {
+        console.error('[main] PowerSync reconnect failed:', e)
+      }
+    }
+  )
 
   try {
     powerSyncDb.registerListener({
