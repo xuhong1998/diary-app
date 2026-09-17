@@ -24,8 +24,12 @@ export function isPowerSyncConfigured(): boolean {
   return Boolean(POWERSYNC_URL) && isSupabaseConfigured
 }
 
+// 与云端唯一约束对齐：modules 有 UNIQUE(date, module_id)，reflections 有 UNIQUE(date)
+// onConflict 不匹配实际唯一约束时，离线多端写入会撞 23505 duplicate key 卡死上传队列
+// PostgREST on_conflict 支持逗号分隔的复合唯一列
 const UPSERT_CONFLICT_COLUMNS: Record<string, string> = {
   reflections: 'date',
+  modules: 'date,module_id',
 }
 
 let lastUploadFailToastAt = 0
