@@ -1,0 +1,168 @@
+/* glass-base.css —— 基础层：设计变量 / 深浅主题 / 玻璃材质 / 应用骨架
+   改造自设计稿 base.css：真实应用全屏布局，去掉手机外框 / 伪状态栏 / 版本徽标 */
+
+/* ============================================================
+   界面：水晶玻璃
+   玻璃：blur 44px / saturate 210%  主色：青
+   Tab：悬浮 4 格 + 独立「记一笔」
+   ============================================================ */
+
+:root{
+  /* ---- 玻璃参数（本版本的核心变量） ---- */
+  --glass-blur: 44px;
+  --glass-sat: 210%;
+  --glass-tint: rgba(255,255,255,.30);
+  --glass-edge: rgba(255,255,255,.55);
+  --glass-hi: rgba(255,255,255,1);
+  --glass-shadow: rgba(15,20,40,.13);
+
+  /* ---- 间距节奏 ---- */
+  --pad: 15px;
+  --gap: 11px;
+  --radius: 15px;
+  --radius-sm: 11px;
+  --radius-lg: 20px;
+
+  /* ---- 浅色主题 ---- */
+  --bg: #eef0f5;
+  --bg-2: #e4e7ef;
+  --text: #10121a;
+  --text-2: #5c6070;
+  --text-3: #8e93a3;
+  --accent: #00a8a0;
+  --accent-2: #32ade6;
+  --card: rgba(255,255,255,.46);
+  --card-edge: rgba(255,255,255,.72);
+  --divider: rgba(20,25,45,.09);
+  --shadow: rgba(15,20,40,.09);
+  --ok: #30d158;
+  --warn: #ff9f0a;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --glass-tint: rgba(28,29,36,.34);
+    --glass-edge: rgba(255,255,255,.10);
+    --glass-hi: rgba(255,255,255,.34);
+    --glass-shadow: rgba(0,0,0,.45);
+
+    --bg: #0b0c10;
+    --bg-2: #14161d;
+    --text: #f5f6fa;
+    --text-2: #a2a7b8;
+    --text-3: #6d7288;
+    --accent: #00c7be;
+    --accent-2: #32ade6;
+    --card: rgba(255,255,255,.045);
+    --card-edge: rgba(255,255,255,.085);
+    --divider: rgba(255,255,255,.08);
+    --shadow: rgba(0,0,0,.5);
+  }
+}
+
+:root[data-theme="dark"]{
+  --glass-tint: rgba(28,29,36,.34);
+  --glass-edge: rgba(255,255,255,.10);
+  --glass-hi: rgba(255,255,255,.34);
+  --glass-shadow: rgba(0,0,0,.45);
+
+  --bg: #0b0c10;
+  --bg-2: #14161d;
+  --text: #f5f6fa;
+  --text-2: #a2a7b8;
+  --text-3: #6d7288;
+  --accent: #00c7be;
+  --accent-2: #32ade6;
+  --card: rgba(255,255,255,.045);
+  --card-edge: rgba(255,255,255,.085);
+  --divider: rgba(255,255,255,.08);
+  --shadow: rgba(0,0,0,.5);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+html,body{height:100%}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;
+  background:var(--bg-2);
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+
+/* ==================== 应用骨架（全屏画布，桌面限宽居中） ==================== */
+.screen{
+  width:100%;max-width:520px;height:100dvh;
+  margin:0 auto;position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  /* 内容驱动的底：页面内容本身即背景 */
+  isolation:isolate;
+}
+
+/* 环境光——让玻璃有东西可折射 */
+.screen::before{
+  content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(48% 34% at 18% 8%,  rgba(120,140,255,.34), transparent 70%),
+    radial-gradient(42% 30% at 88% 22%, rgba(255,120,190,.24), transparent 72%),
+    radial-gradient(56% 40% at 62% 96%, rgba(90,220,220,.24), transparent 74%);
+  filter:blur(28px);
+}
+
+/* ==================== 玻璃材质 ==================== */
+.glass{
+  background:var(--glass-tint);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow:
+    inset 0 .5px 0 var(--glass-hi),
+    inset 0 -.5px 0 rgba(255,255,255,.14),
+    inset 0 0 0 .5px var(--glass-edge),
+    0 10px 34px var(--glass-shadow);
+}
+
+/* ==================== 页面 ==================== */
+.pages{
+  position:absolute;inset:0;z-index:10;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.pages::-webkit-scrollbar{display:none}
+
+.page{display:none;padding:0 var(--pad) 132px}
+.page.active{display:block}
+
+/* ==================== 顶部大标题 ==================== */
+.head{padding:calc(26px + env(safe-area-inset-top,0px)) 0 4px}
+.head .eyebrow{
+  font-size:13px;font-weight:600;letter-spacing:.6px;
+  color:var(--text-3);text-transform:uppercase;margin-bottom:6px;
+}
+.head h1{
+  font-size:31px;font-weight:800;letter-spacing:-.9px;line-height:1.14;
+}
+.head .sub{
+  font-size:16px;font-weight:500;color:var(--text-2);margin-top:5px;
+}
+
+/* 滚动后出现的紧凑玻璃导航栏（仅日记页） */
+.navbar{
+  position:absolute;top:0;left:0;right:0;height:96px;z-index:35;
+  padding:calc(14px + env(safe-area-inset-top,0px)) var(--pad) 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  opacity:0;transform:translateY(-8px);
+  transition:opacity .26s ease,transform .26s ease;
+  pointer-events:none;
+}
+.navbar.show{opacity:1;transform:translateY(0)}
+.navbar .t{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.navbar .d{font-size:13px;color:var(--text-2);font-weight:500;margin-top:1px}
+/* 滚过之后大标题没了，这颗紧凑标题接着当日期入口 —— 翻远日期不用先滚回顶部。
+   指针事件只开在标题这一小块上，整条 navbar 照旧让给滚动 */
+.navbar .nav-date{pointer-events:none}
+.navbar.show .nav-date{pointer-events:auto;cursor:pointer;padding:4px 12px 4px 0}
+.navbar.show .nav-date:active{opacity:.55}

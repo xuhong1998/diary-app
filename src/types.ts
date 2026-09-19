@@ -20,56 +20,12 @@ export interface TodoItem {
   id?: string
   text: string
   done: boolean
-}
-
-export interface AlgorithmProblem {
-  id: string
-  title: string
-  difficulty: 'easy' | 'medium' | 'hard'
-  tags: string[]
-  note?: string
-  stage: number
-  nextReview: string
-  lastReview?: string
-}
-
-export interface InterviewItem {
-  id: string
-  topic: string
-  category: string
-  note: string
-  stage: number
-  nextReview: string
-  lastReview?: string
-}
-
-export interface InterviewModuleData {
-  items: InterviewItem[]
-  summary: string
-}
-
-export type CheckinKind = 'build' | 'quit'
-
-export interface CheckinItem {
-  id: string
-  name: string
-  icon: string
-  kind: CheckinKind
-  active: boolean
-  createdAt: string
-}
-
-export interface CheckinCheck {
-  v: 0 | 1
-  at: string
-}
-
-export interface CheckinModuleData {
-  items: CheckinItem[]
-  checks: Record<string, CheckinCheck>
+  /** 封存时刻（ISO）。旧数据无此字段，归档分组时归入「更早」 */
+  doneAt?: string
 }
 
 export type PomodoroPhase = 'focus' | 'break' | 'longBreak'
+// longBreak 仅为旧数据兼容保留的类型成员，UI 不再使用（休息统一 5 分钟短休）
 
 export interface PomodoroSession {
   id: string
@@ -79,6 +35,7 @@ export interface PomodoroSession {
   seconds: number
   plannedSec: number
   completed: boolean
+  // 设计稿：番茄只挂标签、不挂待办。字段保留以兼容历史数据，新记录恒为 undefined
   todoId?: string
   todoText?: string
 }

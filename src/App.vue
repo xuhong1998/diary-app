@@ -1,150 +1,187 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useModuleStore } from '@/stores/modules'
+import { ref, computed, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDiaryStore } from '@/stores/diary'
 import { usePomodoroStore } from '@/stores/pomodoro'
-import { useRoute } from 'vue-router'
 import { toastMessage } from '@/utils/toast'
 import { useTheme } from '@/utils/theme'
+import { labelOfDate, subOfDate } from '@/utils/date'
+import TabBar from '@/shell/TabBar.vue'
+import Fab from '@/shell/Fab.vue'
+import MoreMenu from '@/shell/MoreMenu.vue'
+import CalendarSheet from '@/components/CalendarSheet.vue'
+import QuickNoteSheet from '@/components/QuickNoteSheet.vue'
+import ReflectEditor from '@/components/ReflectEditor.vue'
+import {
+  openCalendar,
+  openQuickNote,
+  openReflectEditor,
+  invokeFab,
+  unregisterFab,
+  closeMoreMenu,
+  toggleMoreMenu,
+  quickNoteOpen,
+  reflectEditorOpen,
+  calendarOpen,
+  moreMenuOpen,
+} from '@/shell/bus'
 
-const moduleStore = useModuleStore()
-const auth = useAuthStore()
-const diary = useDiaryStore()
 // 应用启动即实例化番茄钟 store：刷新后无论停留在哪个页面，都能恢复/补记计时
 usePomodoroStore()
+
 const route = useRoute()
-const drawerOpen = ref(false)
-const { theme, toggleTheme } = useTheme()
+const router = useRouter()
+const auth = useAuthStore()
+const diary = useDiaryStore()
+const { cycle: cycleTheme } = useTheme()
 
-const navIcons: Record<string, string> = {
-  diary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 4v16M4 8h4"/></svg>',
-  todo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
-  algorithm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8l3 3-3 3M14 8v6"/></svg>',
-  interview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
-  pomodoro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/><path d="M9 2h6"/><line x1="12" y1="2" x2="12" y2="5"/></svg>',
-  export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
-  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+const showLayout = computed(() => !route.meta.public && !auth.loading)
+
+/** 二级页（从「更多」进入）：底栏与球下沉收起，顶栏变「‹ 返回 + 页名」 */
+const SUB_PAGES = ['export', 'settings']
+const isSub = computed(() => SUB_PAGES.includes(String(route.name)))
+const SUB_TITLES: Record<string, string> = { export: '导出', settings: '设置' }
+const subTitle = computed(() => SUB_TITLES[String(route.name)] ?? '')
+
+/** Tab 高亮只给顶级目的地；二级页全灭 */
+const topActive = computed(() => {
+  const name = String(route.name)
+  return ['diary', 'todo', 'pomodoro'].includes(name) ? name : null
+})
+
+// ---------- 滚动浮现的紧凑导航栏（仅日记页；标题也可点，翻远日期不用先滚回顶部） ----------
+const pagesEl = ref<HTMLElement | null>(null)
+const navShow = ref(false)
+
+const navTitle = computed(() => labelOfDate(diary.currentDate))
+const navSub = computed(() => subOfDate(diary.currentDate))
+
+function onScroll() {
+  navShow.value = pagesEl.value ? pagesEl.value.scrollTop > 56 : false
 }
 
-const navItems = computed(() => {
-  const items = [
-    { to: '/diary', icon: 'diary', label: '日记' },
-  ]
-  if (moduleStore.isEnabled('todo')) {
-    items.push({ to: '/todo', icon: 'todo', label: '待办' })
-  }
-  if (moduleStore.isEnabled('pomodoro')) {
-    items.push({ to: '/pomodoro', icon: 'pomodoro', label: '番茄钟' })
-  }
-  if (moduleStore.isEnabled('algorithm')) {
-    items.push({ to: '/algorithm', icon: 'algorithm', label: '算法' })
-  }
-  if (moduleStore.isEnabled('interview')) {
-    items.push({ to: '/interview', icon: 'interview', label: '面试题' })
-  }
-  items.push({ to: '/export', icon: 'export', label: '导出' })
-  items.push({ to: '/search', icon: 'search', label: '搜索' })
-  items.push({ to: '/settings', icon: 'settings', label: '设置' })
-  return items
-})
-
-const currentTitle = computed(() => {
-  return navItems.value.find(i => i.to === route.path)?.label || '日记'
-})
-
-const showLayout = computed(() => {
-  return !route.meta.public && !auth.loading
-})
-
-const syncStatus = computed(() => {
-  if (auth.loading) return ''
-  if (!auth.configured) return '未配置云同步'
-  if (!auth.isSignedIn) return '未登录'
-  if (diary.connected) return '已同步'
-  return '离线'
-})
-
-function closeDrawer() {
-  drawerOpen.value = false
+/** 紧凑标题 = 日历入口（仅日记页渲染这条 navbar，天然不会跨页误开） */
+function onNavTitle() {
+  openCalendar()
 }
 
-watch(() => route.path, () => {
-  drawerOpen.value = false
+function goTop() {
+  nextTick(() => {
+    if (pagesEl.value) pagesEl.value.scrollTop = 0
+    navShow.value = false
+    closeMoreMenu()
+  })
+}
+
+watch(() => route.name, goTop)
+
+// ---------- 页面切换 ----------
+function go(name: string) {
+  if (name === 'more') {
+    toggleMoreMenu()
+    return
+  }
+  router.push({ name })
+}
+
+/** 二级页返回：回到进入前的页面（历史为空则回日记） */
+function goBack() {
+  if (window.history.state?.back) router.back()
+  else router.replace({ name: 'diary' })
+}
+
+// Esc 也能返回 / 关浮层 —— 先让浮层关，再退二级页
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return
+  if (quickNoteOpen.value) {
+    quickNoteOpen.value = false
+    return
+  }
+  if (reflectEditorOpen.value) {
+    reflectEditorOpen.value = false
+    return
+  }
+  if (calendarOpen.value) {
+    calendarOpen.value = false
+    return
+  }
+  if (moreMenuOpen.value) {
+    closeMoreMenu()
+    return
+  }
+  if (isSub.value) goBack()
 })
+
+// ---------- 「＋」悬浮球：点按按页面分流，长按 0.4s 进感悟编辑器（日记页） ----------
+function onFabActivate() {
+  if (invokeFab(String(route.name))) return
+  openQuickNote()
+}
+
+function onFabLongpress() {
+  if (String(route.name) !== 'diary') return
+  openReflectEditor()
+}
+
+// 页面卸载时清理注册的 FAB 行为（按当前页名清，切换路由前旧页面先卸载）
+watch(
+  () => route.name,
+  (_, old) => {
+    if (old) unregisterFab(String(old))
+  }
+)
+
+const subBack = goBack
 </script>
 
 <template>
   <router-view v-if="!showLayout" />
 
-  <div v-else id="app-main">
-    <!-- Navigation Bar -->
-    <div class="nav-bar">
-      <div class="nav-bar-content">
-        <div class="nav-left">
-          <button class="nav-menu-btn" @click="drawerOpen = true" aria-label="打开菜单">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="nav-right">
-          <button class="nav-icon-btn" @click="toggleTheme" aria-label="切换深色模式">
-            <svg v-if="theme === 'light'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          </button>
-        </div>
+  <div v-else id="app-main" class="screen" :class="{ subpage: isSub }">
+    <!-- 滚动后出现的紧凑玻璃导航栏（日记页专属） -->
+    <div v-if="String(route.name) === 'diary'" class="navbar glass" :class="{ show: navShow }">
+      <div class="nav-date" @click="onNavTitle">
+        <div class="t">{{ navTitle }}</div>
+        <div class="d">{{ navSub }}</div>
       </div>
-      <div class="nav-large-title">{{ currentTitle }}</div>
     </div>
 
-    <!-- Scroll Content -->
-    <div class="scroll-content">
+    <!-- 二级页常驻窄顶栏：‹ 在左、页名居中 -->
+    <div v-if="isSub" class="subbar glass show">
+      <button class="bk" aria-label="返回" @click="subBack">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+      </button>
+      <span class="tt">{{ subTitle }}</span>
+    </div>
+
+    <!-- 主题切换 -->
+    <button v-if="!isSub" class="theme-btn" aria-label="切换主题" @click="cycleTheme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+      </svg>
+    </button>
+
+    <!-- 页面 -->
+    <main ref="pagesEl" class="pages" @scroll="onScroll">
       <router-view />
-    </div>
+    </main>
+
+    <!-- 底部玻璃 Tab -->
+    <TabBar :active="topActive" @go="go" />
+
+    <!-- 记一笔悬浮球 -->
+    <Fab @activate="onFabActivate" @longpress="onFabLongpress" />
+
+    <!-- 更多菜单 -->
+    <MoreMenu @go="go" />
+
+    <!-- 全局浮层 -->
+    <CalendarSheet />
+    <QuickNoteSheet />
+    <ReflectEditor />
+
+    <!-- 轻提示 -->
+    <div class="toast" :class="{ show: !!toastMessage }">{{ toastMessage }}</div>
   </div>
-
-  <!-- Drawer Overlay -->
-  <div class="drawer-overlay" :class="{ open: drawerOpen }" @click="closeDrawer"></div>
-
-  <!-- Drawer -->
-  <div class="drawer" :class="{ open: drawerOpen }">
-    <div class="drawer-header">
-      <div class="drawer-logo">
-        <svg width="28" height="28" viewBox="0 0 148 180" fill="none">
-          <path d="M20,20 L130,20 Q148,20 148,38 L148,182 Q148,200 130,200 L20,200 Q2,200 2,182 L2,38 Q2,20 20,20 Z" fill="#fff" rx="16"/>
-          <path d="M2,50 L148,50" stroke="#E0E8F0" stroke-width="2"/>
-          <rect x="2" y="20" width="22" height="180" fill="rgba(0,122,255,0.3)" rx="4"/>
-          <line x1="13" y1="20" x2="13" y2="200" stroke="#0051D5" stroke-width="2" opacity="0.4"/>
-          <line x1="36" y1="76" x2="120" y2="76" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-          <line x1="36" y1="100" x2="120" y2="100" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-          <line x1="36" y1="124" x2="100" y2="124" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-          <line x1="36" y1="148" x2="116" y2="148" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="drawer-title">我的日记</div>
-      <div class="drawer-subtitle">记录每一天的美好</div>
-    </div>
-    <nav class="drawer-nav">
-      <router-link
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to"
-        class="drawer-item"
-        :class="{ active: route.path === item.to }"
-        @click="closeDrawer"
-      >
-        <span v-html="navIcons[item.icon]"></span>
-        <span class="drawer-item-label">{{ item.label }}</span>
-      </router-link>
-    </nav>
-    <div class="drawer-footer">
-      <div class="drawer-sync">
-        <span class="sync-dot" :class="{ active: auth.isSignedIn }"></span>
-        {{ syncStatus }}
-      </div>
-    </div>
-  </div>
-
-  <!-- Global Toast -->
-  <div v-if="toastMessage" class="toast" :key="toastMessage">{{ toastMessage }}</div>
 </template>

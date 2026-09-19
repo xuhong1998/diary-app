@@ -1,0 +1,211 @@
+/* pomodoro.css —— 番茄钟：圆环倒计时 / 标签 chips / 统计 / 新建标签弹层 */
+
+/* ==================== 番茄钟 ====================
+   定位：不是计时器，是「重要的事我投入了多少」的记录器。
+   番茄只挂标签、不挂待办；只在重要的事上开 —— 所以统计不显示全天总时长。
+   结论与理由见 DESIGN.md「番茄钟」一节。
+   类名统一 pm- 前缀，不与主稿其它页撞名，因此不做 [data-page] 限定 */
+
+.pm-timer{position:relative;width:220px;height:220px;margin:12px auto 0;cursor:pointer}
+.pm-ring{width:100%;height:100%;display:block;transform:rotate(-90deg)}
+.pm-ring .track{fill:none;stroke:color-mix(in srgb,var(--text) 8%,transparent);stroke-width:9px}
+.pm-ring .arc{
+  fill:none;stroke:var(--tc);stroke-width:9px;stroke-linecap:round;
+  filter:drop-shadow(0 0 6px color-mix(in srgb,var(--tc) 55%,transparent));
+  transition:stroke .45s ease,filter .45s ease,opacity .45s ease;
+}
+/* 到点后弧留成淡淡一圈 —— 这轮跑满了，别让它整个消失 */
+.pm-timer[data-mode="done"] .arc{opacity:.3}
+.pm-face{
+  position:absolute;inset:0;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+}
+.pm-time{
+  font-size:46px;font-weight:300;letter-spacing:-1.8px;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--text);
+}
+/* 固定高度：idle 是播放键、计时中是标签名，高度一致时间数字才不会上下跳 */
+.pm-label{
+  height:36px;display:flex;align-items:center;
+  font-size:13px;font-weight:650;color:var(--text-2);
+}
+
+/* 未开始时中央的播放键 —— 点一下就跑，不设任何前置步骤 */
+.pm-play{
+  width:36px;height:36px;border-radius:50%;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--tc);color:#fff;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--tc) 40%,transparent);
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.pm-timer:active .pm-play{transform:scale(.9)}
+
+/* 圆环下方：idle 放标签 chips，计时中放操作键，到点放三选一 */
+.pm-slot{min-height:52px;margin-top:18px;display:flex;flex-direction:column;justify-content:center}
+
+.pm-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 1px;scrollbar-width:none}
+.pm-chips::-webkit-scrollbar{display:none}
+.pm-chip{
+  flex:none;height:34px;padding:0 12px;border:0;border-radius:17px;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:650;white-space:nowrap;
+  display:flex;align-items:center;gap:5px;
+  background:var(--card);color:var(--text-2);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+  transition:background .22s ease,color .22s ease,box-shadow .22s ease;
+}
+.pm-chip .t{font-size:11.5px;font-weight:600;opacity:.6;font-variant-numeric:tabular-nums}
+.pm-chip.on{
+  background:color-mix(in srgb,var(--c) 20%,transparent);
+  color:color-mix(in srgb,var(--c) 80%,var(--text));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent);
+}
+.pm-chip.on .t{opacity:.75}
+
+.pm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pm-actions .pm-btn{flex:1}
+.pm-actions .pm-btn.full{flex:0 0 100%}
+
+.pm-btn{
+  height:50px;border:0;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:700;letter-spacing:.2px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:transform .16s ease,background .22s ease,color .22s ease;
+}
+.pm-btn:active{transform:scale(.965)}
+.pm-btn.primary{
+  background:var(--tc);color:#fff;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--tc) 32%,transparent);
+}
+.pm-btn.ghost{
+  background:var(--card);color:var(--text);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+
+/* ---------- 查看统计：时钟页往下看就能找到的那扇门 ----------
+   做得轻 —— 时钟页只有时钟，这颗按钮是入口不是内容，别跟圆环抢注意力。
+   放 chips 下方（原统计区的位置）而不是右上角：那是拇指够得着的地方 */
+.pm-stats-btn{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  margin:24px auto 0;padding:10px 17px;border:0;border-radius:99px;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:650;color:var(--text-2);
+  background:color-mix(in srgb,var(--text) 5%,transparent);
+  transition:background .2s ease,color .2s ease,transform .16s ease;
+}
+.pm-stats-btn:active{transform:scale(.96);background:color-mix(in srgb,var(--text) 9%,transparent)}
+.pm-stats-btn .chev{opacity:.5;margin-left:-1px}
+
+/* 统计搬走以后，这页就剩圆环 + chips + 一颗按钮，全挤在标题底下会头重脚轻。
+   用两条 auto margin 把这一组在「标题以下、tabbar 以上」的空间里居中。
+   注意 min-height:100% 不能省 —— .page 默认高度由内容撑开，不给它撑满
+   滚动容器，就没有剩余空间可分配，两条 auto margin 会一起失效。
+   计时中/到点时 slot 长高，多出的高度由上下两条 auto 均摊 */
+.page[data-page="pomodoro"].active{display:flex;flex-direction:column;min-height:100%}
+.pm-timer{margin-top:auto}
+.pm-stats-btn{margin-bottom:auto;align-self:center}
+
+/* ---------- 统计：时长是主，🍅 是辅 ---------- */
+.pm-seg{
+  display:flex;gap:2px;padding:3px;margin:24px 0 12px;border-radius:12px;
+  background:color-mix(in srgb,var(--text) 6%,transparent);
+}
+.pm-seg button{
+  flex:1;height:32px;border:0;border-radius:9px;background:none;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:650;color:var(--text-3);
+  transition:color .2s ease,background .2s ease;
+}
+.pm-seg button.on{
+  background:var(--card);color:var(--text);
+  box-shadow:0 1px 5px var(--shadow),inset 0 0 0 .5px var(--card-edge);
+}
+
+.pm-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 13px;margin-bottom:7px;border-radius:var(--radius-sm);
+  background:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+.pm-row .em{font-size:17px;flex:none}
+.pm-row .nm{
+  flex:1;min-width:0;font-size:14.5px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pm-row .vl{font-size:15px;font-weight:750;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.pm-row .pc{
+  display:inline-flex;align-items:center;justify-content:flex-end;gap:3px;
+  font-size:11.5px;font-weight:600;color:var(--text-3);
+  font-variant-numeric:tabular-nums;min-width:38px;
+}
+.pm-empty{
+  padding:20px 0;text-align:center;font-size:13px;
+  font-weight:500;color:var(--text-3);line-height:1.7;
+}
+
+/* ---------- 新建标签弹层（浮在 page 外，得盖住 tabbar） ---------- */
+.pm-scrim{
+  position:absolute;inset:0;z-index:70;background:rgba(8,10,18,.44);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+.pm-scrim.show{opacity:1;pointer-events:auto}
+
+.pm-sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:71;--tc:var(--accent);
+  border-radius:30px 30px 0 0;padding:0 var(--pad);
+  padding-bottom:calc(16px + env(safe-area-inset-bottom,18px));
+  transform:translateY(103%);
+  transition:transform .42s cubic-bezier(.32,.72,0,1);
+}
+.pm-sheet.show{transform:translateY(0)}
+.pm-grip{
+  width:38px;height:5px;border-radius:99px;margin:9px auto 0;
+  background:color-mix(in srgb,var(--text) 20%,transparent);
+}
+.pm-sheet h3{font-size:19px;font-weight:750;letter-spacing:-.4px;margin:14px 0 16px}
+.pm-field{margin-bottom:15px}
+.pm-field > span{
+  display:block;font-size:12px;font-weight:700;color:var(--text-3);
+  letter-spacing:.4px;margin-bottom:8px;
+}
+.pm-input{
+  width:100%;height:46px;border:0;border-radius:13px;padding:0 14px;
+  font-family:inherit;font-size:15.5px;font-weight:600;
+  background:var(--card);color:var(--text);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+.pm-input:focus{outline:none;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.pm-input::placeholder{color:var(--text-3);font-weight:500}
+
+.pm-opts{display:flex;gap:7px;flex-wrap:wrap}
+.pm-opt{
+  width:42px;height:42px;border:0;border-radius:12px;cursor:pointer;font-size:19px;
+  background:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .16s ease,box-shadow .2s ease;
+}
+.pm-opt:active{transform:scale(.92)}
+.pm-opt.on{box-shadow:inset 0 0 0 2px var(--accent)}
+
+.pm-color{
+  width:34px;height:34px;border:0;border-radius:50%;cursor:pointer;
+  transition:transform .16s ease,box-shadow .2s ease;
+}
+.pm-color.on{transform:scale(1.1);box-shadow:0 0 0 2.5px var(--bg),0 0 0 4.5px currentColor}
+
+.pm-min{
+  height:38px;padding:0 15px;border:0;border-radius:11px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:650;
+  background:var(--card);color:var(--text-2);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+  transition:background .2s ease,color .2s ease;
+}
+.pm-min.on{background:var(--accent);color:#fff;box-shadow:none}
+
+.pm-sheet-f{display:flex;gap:9px;margin-top:20px}
+.pm-sheet-f .pm-btn{flex:1}
+
+/* ---------- 统计弹层 ----------
+   跟新建标签共用 .pm-sheet 的玻璃与升降动效，只是更高，且列表自己滚 ——
+   记录多了不能把弹层顶穿，也不能把标题和分段顶出屏幕 */
+.pm-sheet.stat{max-height:74%;display:flex;flex-direction:column}
+.pm-sheet.stat .pm-seg{margin:0 0 12px}
+.pm-list{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+

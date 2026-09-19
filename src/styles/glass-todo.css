@@ -1,0 +1,291 @@
+/* todo.css —— 待办页：勾选封存 / 已完成归档 / 空态 / 撤销条 / 长按菜单 / 新建弹层 */
+
+/* ==================== 待办页 ====================
+   规则：只有一种待办。没有日期、没有截止、没有自动重复。
+   完成 = 封存（勾→划→褪→消，不模糊）；删除 = 长按菜单。
+   结论、数值与实现坑见 TODO-SPEC.md
+   全部选择器限定在 [data-page="todo"] 内，不污染其它页面 */
+[data-page="todo"]{--line:color-mix(in srgb,var(--text-3) 80%,transparent)}
+[data-page="todo"] .list{margin-top:18px}
+
+[data-page="todo"] .swiper{
+  position:relative;margin-bottom:7px;
+  transition:height .40s cubic-bezier(.32,.72,0,1),
+             margin-bottom .40s cubic-bezier(.32,.72,0,1),
+             opacity .22s ease-out;
+  touch-action:pan-y;
+}
+[data-page="todo"] .row{
+  position:relative;display:flex;align-items:center;gap:13px;
+  padding:13px 14px;border-radius:var(--radius);
+  background-color:var(--card);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+  transition:background-color .28s ease,
+             transform .22s cubic-bezier(.34,1.4,.64,1),
+             box-shadow .22s ease;
+  -webkit-touch-callout:none;user-select:none;
+}
+/* 长按中：行微微抬起，告诉你「抓住了」 */
+[data-page="todo"] .row.lifted{
+  transform:scale(1.015);
+  box-shadow:inset 0 0 0 .5px var(--card-edge),0 10px 26px var(--shadow);
+}
+
+/* —— 勾选框：液体注入的容器 —— */
+[data-page="todo"] .row .box{
+  width:22px;height:22px;border-radius:50%;flex:none;
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 0 0 2px var(--text-3),0 0 0 0 transparent;
+  transition:box-shadow .28s ease;
+}
+[data-page="todo"] .row .box .fill{
+  position:absolute;left:0;right:0;bottom:0;height:0;
+  background:var(--accent);
+  transition:height .28s cubic-bezier(.32,.72,0,1);
+}
+[data-page="todo"] .row .box .tick{
+  position:relative;z-index:2;display:block;
+  stroke:#fff;stroke-dasharray:24;stroke-dashoffset:24;
+  transition:stroke-dashoffset .22s cubic-bezier(.32,.72,0,1);
+}
+
+/* —— 文字：删除线画在内层 .tx 上（inline + clone）——
+   .label 是 flex:1，线画在它上面会一路划到卡片右边缘，变成分隔线；
+   位置用「内容框高度的百分比」而不是 em（inline 盒背景高度取决于字体度量），
+   40%–50% 是拿浏览器原生 line-through 标定的（原生落在 45%）。 */
+[data-page="todo"] .row .label{
+  font-size:15px;font-weight:500;flex:1;line-height:1.35;
+  color:var(--text);opacity:1;word-break:break-word;
+  transition:color .28s ease,opacity .28s ease;
+}
+[data-page="todo"] .row .label .tx{
+  -webkit-box-decoration-break:clone;box-decoration-break:clone;
+  background-image:linear-gradient(to bottom,
+    transparent 0,   transparent 40%,
+    var(--line) 40%, var(--line) 50%,
+    transparent 50%, transparent 100%);
+  background-size:0% 100%;background-repeat:no-repeat;background-position:0 0;
+  transition:background-size .28s cubic-bezier(.32,.72,0,1);
+}
+
+/* —— 完成态（静态终态）。与 .sealing 动画的终值完全一致，切换时不跳变 —— */
+[data-page="todo"] .row.sealed{background-color:color-mix(in srgb,var(--accent) 7%,var(--card))}
+[data-page="todo"] .row.sealed .box{
+  box-shadow:inset 0 0 0 2px var(--accent),
+             0 0 9px 0 color-mix(in srgb,var(--accent) 24%,transparent);
+}
+[data-page="todo"] .row.sealed .box .fill{height:100%}
+[data-page="todo"] .row.sealed .box .tick{stroke-dashoffset:0}
+[data-page="todo"] .row.sealed .label{color:var(--text-3);opacity:.7}
+[data-page="todo"] .row.sealed .label .tx{background-size:100% 100%}
+
+/* —— 四拍：勾 0–250 · 划 120–380 · 褪 300–600 · 封 200–600 —— */
+[data-page="todo"] .row.sealing{animation:td-cardseal .40s ease .20s forwards}
+[data-page="todo"] .row.sealing .box{animation:td-boxglow .50s ease forwards}
+[data-page="todo"] .row.sealing .box .fill{animation:td-liquid .17s cubic-bezier(.34,1.30,.64,1) forwards}
+[data-page="todo"] .row.sealing .box .tick{animation:td-tickdraw .16s cubic-bezier(.32,.72,0,1) .11s forwards}
+[data-page="todo"] .row.sealing .label{animation:td-fadeout .30s ease .30s forwards}
+[data-page="todo"] .row.sealing .label .tx{animation:td-wiped .26s cubic-bezier(.32,.72,0,1) .12s forwards}
+
+@keyframes td-liquid{from{height:0}to{height:100%}}
+@keyframes td-tickdraw{from{stroke-dashoffset:24}to{stroke-dashoffset:0}}
+@keyframes td-wiped{from{background-size:0% 100%}to{background-size:100% 100%}}
+@keyframes td-fadeout{from{color:var(--text);opacity:1}to{color:var(--text-3);opacity:.7}}
+@keyframes td-cardseal{to{background-color:color-mix(in srgb,var(--accent) 7%,var(--card))}}
+@keyframes td-boxglow{
+  0%  {box-shadow:inset 0 0 0 2px var(--text-3),0 0 0 0 transparent}
+  55% {box-shadow:inset 0 0 0 2px var(--accent),
+                   0 0 11px 1px color-mix(in srgb,var(--accent) 46%,transparent)}
+  100%{box-shadow:inset 0 0 0 2px var(--accent),
+                   0 0 8px 0 color-mix(in srgb,var(--accent) 22%,transparent)}
+}
+
+/* ==================== 待办 · 已完成折叠条 ==================== */
+[data-page="todo"] .donebar{
+  margin-top:22px;border-radius:var(--radius);
+  background-color:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+  overflow:hidden;
+}
+[data-page="todo"] .donebar .sum{display:flex;align-items:center;gap:11px;padding:14px;cursor:pointer}
+[data-page="todo"] .donebar .sum .ic{
+  width:22px;height:22px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background-color:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ok);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),
+             background-color .3s ease,box-shadow .3s ease;
+}
+[data-page="todo"] .donebar .sum .t{
+  font-size:14.5px;font-weight:650;flex:1;color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+[data-page="todo"] .donebar .sum .chev{
+  color:var(--text-3);flex:none;transition:transform .3s cubic-bezier(.32,.72,0,1);
+}
+[data-page="todo"] .donebar.open .sum .chev{transform:rotate(90deg)}
+/* 计数落袋时的一下脉冲 */
+[data-page="todo"] .donebar.tick .sum .ic{
+  transform:scale(1.35);
+  background-color:color-mix(in srgb,var(--accent) 34%,transparent);
+  color:var(--accent);
+  box-shadow:0 0 14px 1px color-mix(in srgb,var(--accent) 42%,transparent);
+}
+[data-page="todo"] .donebody{border-top:.5px solid var(--divider);padding:6px 0 8px}
+[data-page="todo"] .dgroup{padding:8px 14px 2px}
+[data-page="todo"] .dgroup .dtitle{
+  font-size:11.5px;font-weight:700;letter-spacing:.4px;color:var(--text-3);margin-bottom:2px;
+}
+[data-page="todo"] .ditem{display:flex;align-items:center;gap:11px;padding:9px 0}
+[data-page="todo"] .ditem .dtx{
+  font-size:14.5px;font-weight:500;flex:1;line-height:1.35;
+  color:var(--text-3);opacity:.7;word-break:break-word;
+}
+/* 归档区用同一套删除线，保证完成态到哪都长一样 */
+[data-page="todo"] .ditem .dtx .tx{
+  -webkit-box-decoration-break:clone;box-decoration-break:clone;
+  background-image:linear-gradient(to bottom,
+    transparent 0,   transparent 40%,
+    var(--line) 40%, var(--line) 50%,
+    transparent 50%, transparent 100%);
+  background-size:100% 100%;background-repeat:no-repeat;background-position:0 0;
+}
+[data-page="todo"] .ditem .again{
+  flex:none;width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);background-color:color-mix(in srgb,var(--accent) 13%,transparent);
+  transition:transform .2s ease,background-color .2s ease;
+}
+[data-page="todo"] .ditem .again:active{
+  transform:scale(.88);background-color:color-mix(in srgb,var(--accent) 26%,transparent);
+}
+
+/* ==================== 待办 · 空态 ==================== */
+[data-page="todo"] .void{
+  display:none;flex-direction:column;align-items:center;
+  padding:96px 30px 0;text-align:center;
+}
+[data-page="todo"] .void.show{display:flex}
+[data-page="todo"] .void .mark{
+  width:74px;height:74px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin-bottom:22px;
+}
+[data-page="todo"] .void .mark.todoempty{box-shadow:inset 0 0 0 2.5px var(--text-3);color:var(--text-3)}
+[data-page="todo"] .void .mark.alldone{
+  position:relative;
+  background-color:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent),
+             0 12px 34px color-mix(in srgb,var(--accent) 24%,transparent);
+}
+[data-page="todo"] .void.show .mark.alldone{animation:td-markpop .72s cubic-bezier(.34,1.46,.64,1) both}
+[data-page="todo"] .void.show .mark.alldone::after{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  animation:td-ripple 1.15s ease-out .12s both;
+}
+[data-page="todo"] .void .t{font-size:18px;font-weight:750;letter-spacing:-.3px}
+[data-page="todo"] .void .d{
+  font-size:14px;line-height:1.75;color:var(--text-3);margin-top:10px;
+  font-weight:500;max-width:250px;
+}
+@keyframes td-markpop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.10);opacity:1}100%{transform:scale(1)}}
+@keyframes td-ripple{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 42%,transparent)}
+  100%{box-shadow:0 0 0 62px color-mix(in srgb,var(--accent) 0%,transparent)}
+}
+
+/* ==================== 待办 · 删除撤销条 ==================== */
+.undo-bar{
+  position:absolute;left:14px;right:14px;bottom:96px;z-index:60;
+  display:flex;align-items:center;gap:12px;
+  padding:13px 14px;border-radius:16px;
+  font-size:14px;font-weight:600;
+  background:rgba(24,26,34,.86);color:#f0f1f6;
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:0 10px 30px rgba(0,0,0,.34);
+  transform:translateY(14px);opacity:0;pointer-events:none;
+  transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .3s ease;
+}
+.undo-bar.show{transform:translateY(0);opacity:1;pointer-events:auto}
+.undo-bar .ut{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.undo-bar button{
+  flex:none;border:0;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:750;color:#00d8cd;background:none;padding:2px 4px;
+}
+
+/* ==================== 待办 · 长按菜单 ====================
+   删除是「罕见 + 破坏性」：配得上一个明确入口 + 一次确认。
+   不做左滑 —— 滑动的表现力只能花在「拖动中」，而拖动是输入、不是承诺。 */
+.menu-scrim{
+  position:absolute;inset:0;z-index:80;
+  background:rgba(8,10,18,.26);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+.menu-scrim.show{opacity:1;pointer-events:auto}
+.long-menu{
+  position:absolute;z-index:81;width:198px;padding:6px;border-radius:16px;
+  transform-origin:var(--ox,18px) var(--oy,0);
+  transform:scale(.86);opacity:0;pointer-events:none;
+  transition:transform .22s cubic-bezier(.34,1.4,.64,1),opacity .15s ease;
+}
+.long-menu.show{transform:scale(1);opacity:1;pointer-events:auto}
+.long-menu .mi{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:12px 13px;border:0;background:none;cursor:pointer;
+  font-family:inherit;font-size:15px;font-weight:600;color:var(--text);
+  border-radius:11px;text-align:left;transition:background-color .15s ease;
+}
+.long-menu .mi:active{background-color:color-mix(in srgb,var(--text) 9%,transparent)}
+.long-menu .mi .mic{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center}
+.long-menu .mi.danger{color:#ff453a}
+.long-menu .msep{height:.5px;background:var(--divider);margin:4px 8px}
+
+/* ==================== 待办 · 新建/编辑弹层（复用 .sheet 外壳） ==================== */
+.sheet-narrow{min-height:0;max-height:80%}
+.field-input{
+  display:flex;align-items:center;flex:none;
+  min-height:52px;padding:13px 15px;border-radius:var(--radius);
+  background-color:color-mix(in srgb,var(--text) 6%,transparent);
+  box-shadow:inset 0 0 0 .5px var(--divider);
+}
+.field-input input{
+  width:100%;border:0;background:none;font-family:inherit;
+  font-size:16px;font-weight:500;color:var(--text);outline:none;
+}
+.field-input input::placeholder{color:var(--text-3)}
+.sug-wrap{
+  overflow-y:auto;flex:1;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.sug-wrap::-webkit-scrollbar{display:none}
+.sug-wrap.hide{display:none}
+.sug-wrap .sugtitle{
+  font-size:11.5px;font-weight:700;letter-spacing:.5px;
+  color:var(--text-3);margin:22px 0 8px;
+}
+.sug-wrap .sug{
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  padding:12px 13px;margin-bottom:6px;border-radius:var(--radius-sm);
+  background-color:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+.sug-wrap .sug:active{background-color:color-mix(in srgb,var(--accent) 10%,var(--card))}
+.sug-wrap .sug .ic{
+  width:24px;height:24px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background-color:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);
+}
+.sug-wrap .sug .t{font-size:15px;font-weight:500;flex:1;line-height:1.35}
+.sug-wrap .sug .t mark{
+  background-color:color-mix(in srgb,var(--accent) 26%,transparent);
+  color:inherit;border-radius:3px;padding:0 1px;
+}
+.sug-wrap .sug .when{
+  font-size:11.5px;font-weight:600;color:var(--text-3);flex:none;
+  font-variant-numeric:tabular-nums;
+}
+.sug-wrap .sug-none{font-size:13px;color:var(--text-3);padding:6px 2px 0;line-height:1.7}
+.sheet-add{margin-top:18px;flex:none}
+.sheet-add.off{
+  background:color-mix(in srgb,var(--text) 9%,transparent);
+  color:var(--text-3);box-shadow:none;cursor:default;
+}
+

@@ -11,6 +11,10 @@ export function parseDate(s: string): Date {
   return new Date(y, m - 1, d)
 }
 
+export function makeDateKey(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
 export function todayStr(): string {
   return formatDate(new Date())
 }
@@ -32,6 +36,31 @@ export function getPeriod(d: Date): Period {
   if (h < 12) return 'morning'
   if (h < 18) return 'afternoon'
   return 'evening'
+}
+
+/** 'M月D日' 短标签（日记大标题 / navbar / 感悟编辑器日期行共用） */
+export function labelOfDate(dateStr: string): string {
+  const [, m, d] = dateStr.split('-').map(Number)
+  return `${m}月${d}日`
+}
+
+const WEEKDAYS_CN = ['日', '一', '二', '三', '四', '五', '六']
+
+export function weekdayCn(dateStr: string): string {
+  return WEEKDAYS_CN[parseDate(dateStr).getDay()]
+}
+
+/** '星期五 · 今天' / '星期五' */
+export function subOfDate(dateStr: string, today = todayStr()): string {
+  const w = '星期' + weekdayCn(dateStr)
+  return dateStr === today ? `${w} · 今天` : w
+}
+
+/** 日期平移（原 review.ts 提供，随算法/面试模块下线并入此处） */
+export function addDays(dateStr: string, days: number): string {
+  const d = parseDate(dateStr)
+  d.setDate(d.getDate() + days)
+  return formatDate(d)
 }
 
 export function normalizeTime(input: string): string {

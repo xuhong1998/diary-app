@@ -1,0 +1,150 @@
+/* more.css —— 「更多」里的两个二级页：设置 / 导出
+   两页共用一套 iOS 分组列表语言，前缀 st-（不与主稿任何类撞名，故不做 [data-page] 限定，
+   与 pm- 的选择同理）；导出页独有的东西（分段汇总 / 大按钮 / 提示条）用 ex- 前缀 */
+
+/* ==================== 分组列表（两页共用） ==================== */
+.st-sec{margin-top:22px}
+.st-h{
+  font-size:12.5px;font-weight:700;letter-spacing:.5px;
+  color:var(--text-3);margin:0 14px 8px;
+}
+.st-group{
+  border-radius:var(--radius);
+  background:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+  overflow:hidden;
+}
+.st-row{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.st-row + .st-row{border-top:.5px solid var(--divider)}
+
+/* 行首彩色小图标 —— 颜色走每行自己的 --ic */
+.st-ic{
+  width:30px;height:30px;border-radius:8px;flex:none;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  background:color-mix(in srgb,var(--ic,var(--accent)) 82%,#10121a 4%);
+  box-shadow:0 3px 9px color-mix(in srgb,var(--ic,var(--accent)) 30%,transparent);
+}
+.st-ic svg{width:16px;height:16px;display:block}
+
+.st-c{flex:1;min-width:0}
+.st-t{font-size:15px;font-weight:600;letter-spacing:-.2px;color:var(--text)}
+.st-d{font-size:12.5px;font-weight:500;color:var(--text-3);margin-top:2px;line-height:1.4}
+.st-val{font-size:14px;font-weight:550;color:var(--text-3);font-variant-numeric:tabular-nums}
+
+/* 日记是核心模块：没有开关，只有一枚灰徽章 */
+.st-core{
+  flex:none;font-size:11.5px;font-weight:700;
+  padding:3px 10px;border-radius:99px;color:var(--text-3);
+  background:color-mix(in srgb,var(--text) 8%,transparent);
+}
+
+.st-link{
+  flex:none;border:0;background:none;font-family:inherit;cursor:pointer;
+  font-size:14.5px;font-weight:650;color:var(--accent);padding:6px 2px;
+}
+.st-link.danger{color:#ff453a}
+.st-link:active{opacity:.55}
+
+/* iOS 开关：唯一的开关样式，模块 / 打卡总开关共用 */
+.st-toggle{
+  flex:none;width:48px;height:29px;border-radius:99px;position:relative;cursor:pointer;
+  background:color-mix(in srgb,var(--text) 12%,transparent);
+  box-shadow:inset 0 0 0 .5px var(--divider);
+  transition:background .24s ease,box-shadow .24s ease;
+}
+.st-toggle::after{
+  content:"";position:absolute;top:2px;left:2px;width:25px;height:25px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);
+  transition:transform .26s cubic-bezier(.32,.72,0,1);
+}
+.st-toggle.on{
+  background:var(--accent);
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--accent) 70%,transparent),
+             0 3px 10px color-mix(in srgb,var(--accent) 28%,transparent);
+}
+.st-toggle.on::after{transform:translateX(19px)}
+
+/* 三段分段控件：设置页的主题行内用，导出页整行用（ex-seg 拉宽） */
+.st-seg{
+  display:flex;gap:2px;padding:3px;border-radius:11px;flex:none;
+  background:color-mix(in srgb,var(--text) 7%,transparent);
+}
+.st-seg button{
+  border:0;background:none;font-family:inherit;cursor:pointer;
+  font-size:12.5px;font-weight:650;color:var(--text-3);
+  padding:6px 11px;border-radius:8px;
+  transition:color .2s ease,background .2s ease,box-shadow .2s ease;
+}
+.st-seg button.on{
+  background:var(--card);color:var(--text);
+  box-shadow:0 1px 5px var(--shadow),inset 0 0 0 .5px var(--card-edge);
+}
+
+/* 页脚小字 */
+.st-foot{
+  margin:28px 10px 0;text-align:center;
+  font-size:12px;line-height:1.75;color:var(--text-3);font-weight:500;
+}
+
+/* ==================== 设置页 ==================== */
+/* 同步状态横幅：置顶，一眼看到数据在哪儿 */
+.st-banner{
+  display:flex;align-items:center;gap:9px;margin-top:16px;
+  padding:11px 16px;border-radius:99px;
+  font-size:13px;font-weight:650;color:var(--text-2);letter-spacing:.1px;
+}
+.st-banner svg{width:15px;height:15px;flex:none;color:var(--accent)}
+
+/* 打卡的 7 行：emoji 替掉彩色图标，右侧是原生时间控件 */
+.st-row .ck-em{width:30px;flex:none;text-align:center;font-size:19px}
+#stCkRows .st-row{border-top:.5px solid var(--divider)}
+.st-time{
+  flex:none;border:0;background:none;outline:none;cursor:pointer;
+  font-family:inherit;font-size:14.5px;font-weight:650;color:var(--accent);
+  padding:4px 8px;border-radius:8px;font-variant-numeric:tabular-nums;
+}
+.st-time:active{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* 时间 / 日期控件的弹出面板跟着主题走，否则深色下弹一块白的 */
+:root[data-theme="dark"] .st-time,
+:root[data-theme="dark"] .ex-date{color-scheme:dark}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .st-time,
+  :root:not([data-theme="light"]) .ex-date{color-scheme:dark}
+}
+
+/* ==================== 导出页 ==================== */
+/* 分段整行铺开（st-seg 默认是设置页里的行内尺寸） */
+.ex-seg{display:flex;width:100%}
+.ex-seg button{flex:1;height:34px;font-size:13.5px}
+
+.ex-range{margin-top:10px}
+.ex-date{
+  flex:none;border:0;background:none;outline:none;
+  font-family:inherit;font-size:14.5px;font-weight:600;color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+/* 汇总行：导出前就知道会拿到什么 */
+.ex-sum{
+  margin-top:14px;text-align:center;
+  font-size:13px;font-weight:600;color:var(--text-2);
+  font-variant-numeric:tabular-nums;letter-spacing:.1px;
+}
+
+.ex-go{
+  display:block;width:100%;height:50px;margin-top:14px;
+  border:0;border-radius:15px;cursor:pointer;font-family:inherit;
+  font-size:16px;font-weight:700;letter-spacing:.2px;color:#fff;
+  background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 38%,transparent);
+  transition:transform .16s ease;
+}
+.ex-go:active{transform:scale(.975)}
+.ex-go.ghost{
+  background:var(--card);color:var(--text);
+  box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+
+.ex-tip{
+  margin:24px 8px 0;text-align:center;
+  font-size:12.5px;line-height:1.75;color:var(--text-3);font-weight:500;
+}

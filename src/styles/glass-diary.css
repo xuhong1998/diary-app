@@ -1,0 +1,126 @@
+/* diary.css —— 日记页：天气胶囊 / 时间线 / 感悟卡片 */
+
+/* ==================== 天气胶囊 ==================== */
+.weather{
+  margin-top:var(--gap);
+  padding:11px 15px;border-radius:var(--radius);
+  display:flex;align-items:center;gap:12px;
+}
+.weather .em{font-size:24px;line-height:1}
+.weather .val{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.weather .loc{font-size:13px;color:var(--text-2);font-weight:500}
+.weather .spacer{flex:1}
+.weather .hum{font-size:12px;color:var(--text-3);font-weight:600}
+
+/* ==================== 日期标题（即日历入口） ==================== */
+/* 没有左右箭头：这一页的翻页入口就是日期本身，chevron 是唯一的「这儿能点」提示 */
+.head h1.date-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  cursor:pointer;transition:transform .16s ease;
+}
+.head h1.date-btn:active{transform:scale(.97)}
+.head .chev{
+  width:20px;height:20px;flex:none;
+  color:var(--text-3);opacity:.6;
+  transition:transform .18s ease,opacity .18s ease;
+}
+.head h1.date-btn:active .chev{transform:translateY(1.5px);opacity:.9}
+
+/* ==================== 时间线 ==================== */
+.section-label{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:700;color:var(--text-3);
+  letter-spacing:.4px;margin:18px 0 7px;
+}
+.section-label .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+.section-label.p2 .dot{
+  background:var(--accent-2);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-2) 18%,transparent);
+}
+.section-label.p3 .dot{
+  background:var(--warn);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 18%,transparent);
+}
+.section-label .count{
+  margin-left:auto;font-size:12px;font-weight:600;color:var(--text-3);
+}
+
+/* 空日期：不摆一张白纸，也不写「你还没写」—— 一句话，和 entry 同一个材质 */
+.tl-void{
+  margin-top:18px;padding:26px 18px;border-radius:var(--radius);
+  text-align:center;
+  background:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+}
+.tl-void .t{font-size:14px;font-weight:650;color:var(--text-2)}
+.tl-void .d{font-size:12.5px;font-weight:500;color:var(--text-3);margin-top:5px}
+
+.entry{
+  display:flex;gap:12px;padding:10px 13px;margin-bottom:6px;
+  border-radius:var(--radius-sm);
+  background:var(--card);box-shadow:inset 0 0 0 .5px var(--card-edge);
+  transition:transform .16s ease,background .16s ease;
+}
+.entry:active{transform:scale(.985)}
+.entry .time{
+  font-size:13px;font-weight:700;color:var(--accent);
+  font-variant-numeric:tabular-nums;flex:none;padding-top:1px;min-width:42px;
+}
+.entry .txt{font-size:14px;line-height:1.45;color:var(--text);font-weight:450}
+
+/* ==================== 感悟卡片 ==================== */
+.reflect{
+  margin-top:26px;padding:18px;border-radius:var(--radius);
+  position:relative;overflow:hidden;
+}
+.reflect::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(135deg,rgba(0,199,190,.18),transparent 58%);
+}
+.reflect .h{
+  display:flex;align-items:center;
+  font-size:12px;font-weight:700;color:var(--accent-2);
+  letter-spacing:.5px;margin-bottom:8px;position:relative;
+}
+.reflect .h .edit{
+  margin-left:auto;font-size:12px;font-weight:650;
+  letter-spacing:0;color:var(--accent);cursor:pointer;
+  padding:2px 0;
+}
+.reflect .b{
+  font-size:15px;line-height:1.62;color:var(--text-2);
+  position:relative;font-weight:450;
+}
+/* 空白态：一个字没写时整张卡片就是入口，「编辑 ›」让位 */
+.reflect.blank{cursor:pointer}
+.reflect.blank .b{color:var(--text-3)}
+.reflect.blank .edit{display:none}
+
+/* 截断态：3 行 + 「展开全文」。预览是纯文本，一行一段 */
+.reflect .b.clamp{
+  display:-webkit-box;-webkit-box-orient:vertical;
+  -webkit-line-clamp:3;overflow:hidden;
+}
+/* 展开态：富文本原地铺开，不跳编辑器 */
+.reflect .b p{margin-bottom:10px}
+.reflect .b p:last-child{margin-bottom:0}
+.reflect .b ul{margin:0 0 10px;padding-left:19px}
+.reflect .b li{margin-bottom:5px}
+.reflect .b blockquote{
+  margin:0 0 10px;padding:2px 0 2px 12px;
+  border-left:2.5px solid color-mix(in srgb,var(--accent) 55%,transparent);
+  color:var(--text-3);font-style:italic;
+}
+.reflect .b b,.reflect .b strong{font-weight:750;color:var(--text)}
+.reflect .more{
+  position:relative;display:block;margin-top:9px;
+  font-size:13px;font-weight:650;color:var(--accent);cursor:pointer;
+}
+.reflect.open .more{
+  margin-top:13px;padding-top:10px;text-align:center;
+  border-top:.5px solid var(--divider);
+  font-size:12.5px;font-weight:600;color:var(--text-3);
+}
+

@@ -13,35 +13,21 @@ watch(() => auth.isSignedIn, (signedIn) => {
 
 <template>
   <div class="login-page">
-    <div class="login-logo">
-      <svg width="48" height="48" viewBox="0 0 148 180" fill="none">
-        <path d="M20,20 L130,20 Q148,20 148,38 L148,182 Q148,200 130,200 L20,200 Q2,200 2,182 L2,38 Q2,20 20,20 Z" fill="#fff" rx="16"/>
-        <path d="M2,50 L148,50" stroke="#E0E8F0" stroke-width="2"/>
-        <rect x="2" y="20" width="22" height="180" fill="rgba(0,122,255,0.3)" rx="4"/>
-        <line x1="13" y1="20" x2="13" y2="200" stroke="#0051D5" stroke-width="2" opacity="0.4"/>
-        <line x1="36" y1="76" x2="120" y2="76" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-        <line x1="36" y1="100" x2="120" y2="100" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-        <line x1="36" y1="124" x2="100" y2="124" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-        <line x1="36" y1="148" x2="116" y2="148" stroke="#CDD8E0" stroke-width="6" stroke-linecap="round"/>
-      </svg>
-    </div>
     <div class="login-title">我的日记</div>
-    <div class="login-subtitle">登录后可跨设备同步<br>保留每一天的回忆</div>
+    <div class="login-subtitle">登录后可跨设备同步<br />保留每一天的回忆</div>
 
     <div v-if="auth.configured" class="login-btn-wrap">
-      <button class="ios-btn" @click="auth.signInWithGithub">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      <button class="login-btn" @click="auth.signInWithGithub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" /></svg>
         使用 GitHub 登录
       </button>
     </div>
 
-    <div v-else class="tip-box" style="max-width:320px;">
-      Supabase 未配置，请在 <code>.env</code> 中填写
+    <div v-else class="login-tip">
+      Supabase 未配置，请在 <code>.env</code> 中填写<br />
       <code>VITE_SUPABASE_URL</code> 与 <code>VITE_SUPABASE_ANON_KEY</code>
     </div>
 
-    <div class="login-footer">
-      数据保存在你的 Supabase 项目中，可随时导出备份
-    </div>
+    <div class="login-tip">数据保存在你的 Supabase 项目中，可随时导出备份</div>
   </div>
 </template>

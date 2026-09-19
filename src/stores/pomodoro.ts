@@ -2,101 +2,126 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { powerSyncDb } from '@/db/powersync'
-import { todayStr, formatDate } from '@/utils/date'
+import { formatDate } from '@/utils/date'
 import { toast } from '@/utils/toast'
 import {
-  POMODORO_MODES,
-  modeById,
-  phaseMinutes,
-  breakAfterFocus,
+  loadTags,
+  saveTags,
   parsePomodoroData,
   formatClock,
   clockOf,
+  REST_SEC,
+  MIN_RECORD_SEC,
+  DEFAULT_TAGS,
+  type PomodoroTag,
 } from '@/utils/pomodoro'
 import {
   playChime,
   vibrate,
   sendNotification,
-  requestNotifyPermission,
   unlockAudio,
   installAudioUnlock,
 } from '@/utils/notify'
-import type { PomodoroPhase, PomodoroSession } from '@/types'
+import type { PomodoroSession } from '@/types'
 
-export type TimerState = 'idle' | 'running' | 'paused'
+/**
+ * 番茄钟 store —— 设计稿状态机：
+ *   idle ──点圆环──▶ focus ──到点──▶ done ──┬─ 开始休息 ─▶ break ──到点──▶ idle
+ *                                          ├─ +5 分钟 ─▶ focus（时长延长，🍅 不变）
+ *                                          └─ 结束 ────▶ idle
+ * 记账口径：🍅 只数完整轮；提前结束满 1 分钟记时长但 🍅 +0；+5 分钟只加时长。
+ * 时间戳算剩余：切页 / 后台 / 关页都不漂。写库结构与 recordFocusSession 保持不变。
+ */
+
+export type PomodoroStage = 'idle' | 'focus' | 'break' | 'done'
 
 const STATE_KEY = 'pomodoro-timer-state'
-const MODE_KEY = 'pomodoro-mode'
+const TAG_KEY = 'pomodoro-mode' // 沿用旧 key：记住上次用的标签
 
 /** 本标签页唯一标识，用于多标签互斥（Web Locks 为主，storage 事件兜底） */
 const TAB_ID = crypto.randomUUID()
 
 interface PersistedState {
-  phase: PomodoroPhase
-  state: TimerState
+  phase: 'focus' | 'break'
+  state: 'running' | 'paused'
   endAt: number
   remainingMs?: number
   phaseStartedAt: number
-  focusDate: string
-  focusDone: number
-  modeId: string
-  todoId?: string
-  todoText?: string
+  tagId?: string
   tabId?: string
 }
 
-const MIN_RECORD_MS = 60_000
-
 export const usePomodoroStore = defineStore('pomodoro', () => {
-  const modeId = ref(loadModeId())
-  const phase = ref<PomodoroPhase>('focus')
-  const timerState = ref<TimerState>('idle')
-  const endAt = ref(0)
-  const remainingMs = ref(0)
+  // ---------- 标签 ----------
+  const tags = ref<PomodoroTag[]>(loadTags())
+  const tagId = ref(loadTagId())
+
+  function loadTagId(): string {
+    try {
+      const saved = localStorage.getItem(TAG_KEY)
+      if (saved && tags.value.some(t => t.id === saved)) return saved
+    } catch {}
+    return tags.value[0]?.id ?? DEFAULT_TAGS[0].id
+  }
+
+  function persistTags() {
+    saveTags(tags.value)
+  }
+
+  function addTag(tag: PomodoroTag) {
+    tags.value = [...tags.value, tag]
+    persistTags()
+    tagId.value = tag.id // 新建完直接选中它，可以马上开一个
+    try {
+      localStorage.setItem(TAG_KEY, tag.id)
+    } catch {}
+  }
+
+  function selectTag(id: string) {
+    if (stage.value !== 'idle') return
+    if (!tags.value.some(t => t.id === id)) return
+    tagId.value = id
+    try {
+      localStorage.setItem(TAG_KEY, id)
+    } catch {}
+  }
+
+  const curTag = computed<PomodoroTag>(() => tags.value.find(t => t.id === tagId.value) ?? tags.value[0] ?? DEFAULT_TAGS[0])
+
+  // ---------- 计时状态 ----------
+  const stage = ref<PomodoroStage>('idle')
+  const paused = ref(false)
+  const totalSec = ref(0)
+  const leftSec = ref(0)
+  const deadline = ref(0)
   const phaseStartedAt = ref(0)
-  const focusDone = ref(0)
-  const focusDate = ref(todayStr())
-  const todoId = ref<string | undefined>(undefined)
-  const todoText = ref<string | undefined>(undefined)
   const now = ref(Date.now())
   /** 另一标签页正在计时：本标签只读展示，不接管、不写库 */
   const mirrored = ref(false)
 
   let ticker: number | undefined
 
-  const mode = computed(() => modeById(modeId.value))
-  const isFocus = computed(() => phase.value === 'focus')
-  const durationMs = computed(() => phaseMinutes(mode.value, phase.value) * 60_000)
+  const clock = computed(() => {
+    const base = stage.value === 'idle' ? curTag.value.min * 60 : leftSec.value
+    return formatClock(base)
+  })
 
-  const remainingMsNow = computed(() =>
-    timerState.value === 'running' ? Math.max(0, endAt.value - now.value) : remainingMs.value
-  )
-
-  const progress = computed(() =>
-    timerState.value === 'idle'
-      ? 0
-      : durationMs.value
-        ? Math.min(1, Math.max(0, 1 - remainingMsNow.value / durationMs.value))
-        : 0
-  )
-
-  // idle 时显示计划时长（如 25:00）而不是 remainingMs=0 的 00:00，圆环保持空环
-  const clock = computed(() =>
-    formatClock((timerState.value === 'idle' ? durationMs.value : remainingMsNow.value) / 1000)
-  )
-  const roundLabel = computed(() => `第 ${focusDone.value + 1} 轮`)
-
-  function loadModeId(): string {
-    const saved = localStorage.getItem(MODE_KEY)
-    return saved && POMODORO_MODES.some(m => m.id === saved) ? saved : POMODORO_MODES[0].id
-  }
+  /** 圆环 offset（C 由视图层算）；done 时视图层置 0 配合 CSS 变淡 */
+  const progressFrac = computed(() => {
+    const total = stage.value === 'idle' ? curTag.value.min * 60 : totalSec.value
+    const left = stage.value === 'idle' ? total : leftSec.value
+    return total ? Math.min(1, Math.max(0, left / total)) : 1
+  })
 
   function ensureTicker() {
     if (ticker !== undefined) return
     ticker = window.setInterval(() => {
       now.value = Date.now()
       // 镜像标签只走钟面显示，不触发完成/写库
-      if (!mirrored.value && timerState.value === 'running' && now.value >= endAt.value) complete()
+      if (!mirrored.value && !paused.value && (stage.value === 'focus' || stage.value === 'break')) {
+        leftSec.value = Math.max(0, (deadline.value - now.value) / 1000)
+        if (leftSec.value <= 0) complete()
+      }
     }, 250)
   }
 
@@ -115,7 +140,10 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         void maybePromote()
         return
       }
-      if (timerState.value === 'running' && now.value >= endAt.value) complete()
+      if (!paused.value && (stage.value === 'focus' || stage.value === 'break')) {
+        leftSec.value = Math.max(0, (deadline.value - now.value) / 1000)
+        if (leftSec.value <= 0) complete()
+      }
     })
   }
 
@@ -126,7 +154,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
       if (!mirrored.value) {
         try {
           const s = e.newValue ? (JSON.parse(e.newValue) as PersistedState) : null
-          if (s?.tabId && s.tabId > TAB_ID && timerState.value !== 'idle') becomeMirror(true)
+          if (s?.tabId && s.tabId > TAB_ID && stage.value !== 'idle') becomeMirror(true)
         } catch {}
       } else {
         syncFromPersisted()
@@ -134,18 +162,16 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
     })
   }
 
+  // ---------- 持久化（刷新/关页后恢复） ----------
   function persist() {
+    if (stage.value !== 'focus' && stage.value !== 'break') return
     const s: PersistedState = {
-      phase: phase.value,
-      state: timerState.value,
-      endAt: endAt.value,
-      remainingMs: remainingMs.value,
+      phase: stage.value,
+      state: paused.value ? 'paused' : 'running',
+      endAt: deadline.value,
+      remainingMs: leftSec.value * 1000,
       phaseStartedAt: phaseStartedAt.value,
-      focusDate: focusDate.value,
-      focusDone: focusDone.value,
-      modeId: modeId.value,
-      todoId: todoId.value,
-      todoText: todoText.value,
+      tagId: tagId.value,
       tabId: TAB_ID,
     }
     try {
@@ -161,18 +187,30 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
 
   /**
    * 把一次专注追加到它开始那天（跨零点也归开始日）的模块数据里。
-   * 开始时刻/模式/待办在入口同步捕获——complete()/skip() 会在 await 期间
-   * 立即 beginPhase() 覆盖 phaseStartedAt，晚了就读到休息的开始时刻。
+   * 开始时刻/标签在入口同步捕获——complete()/stop() 会在 await 期间覆盖 phaseStartedAt，
+   * 晚了就读到休息的开始时刻。记住刚写的这条，供「+5 分钟」原地延长。
    */
+  let lastSession: { date: string; id: string } | null = null
+  /** 本轮是「+5 分钟」延续下来的：到点不再新记一条，只把原记录的时长加长（🍅 不动） */
+  let extendedRound = false
+
+  async function writeSessions(startDate: string, sessions: PomodoroSession[]): Promise<boolean> {
+    try {
+      await useDiaryStore().updateModuleData('pomodoro', { sessions }, startDate)
+      return true
+    } catch (e) {
+      console.error('[pomodoro] record session failed:', e)
+      return false
+    }
+  }
+
   async function recordFocusSession(
     seconds: number,
     completed: boolean,
     endedAtEpoch?: number
   ): Promise<boolean> {
     const startedAtMs = phaseStartedAt.value
-    const sessionMode = mode.value
-    const sessionTodoId = todoId.value
-    const sessionTodoText = todoText.value
+    const sessionTag = curTag.value
     const startDate = formatDate(new Date(startedAtMs))
     try {
       const row = await powerSyncDb.getOptional<{ data: string }>(
@@ -182,20 +220,38 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
       const sessions = parsePomodoroData(row?.data)
       const s: PomodoroSession = {
         id: crypto.randomUUID(),
-        modeId: sessionMode.id,
+        modeId: sessionTag.id,
         startedAt: clockOf(startedAtMs),
         endedAt: clockOf(endedAtEpoch ?? Date.now()),
         seconds: Math.round(seconds),
-        plannedSec: Math.round(phaseMinutes(sessionMode, 'focus') * 60),
+        plannedSec: Math.round(sessionTag.min * 60),
         completed,
-        todoId: sessionTodoId,
-        todoText: sessionTodoText,
       }
       sessions.push(s)
-      await useDiaryStore().updateModuleData('pomodoro', { sessions }, startDate)
-      return true
+      lastSession = { date: startDate, id: s.id }
+      return await writeSessions(startDate, sessions)
     } catch (e) {
       console.error('[pomodoro] record session failed:', e)
+      return false
+    }
+  }
+
+  /** 「+5 分钟」的记账：把刚才那条记录的时长与结束时刻原地改长，🍅 不动 */
+  async function extendLastSession(newSeconds: number): Promise<boolean> {
+    if (!lastSession) return false
+    try {
+      const row = await powerSyncDb.getOptional<{ data: string }>(
+        'SELECT data FROM modules WHERE date = ? AND module_id = ? AND deleted_at IS NULL',
+        [lastSession.date, 'pomodoro']
+      )
+      const sessions = parsePomodoroData(row?.data)
+      const s = sessions.find(x => x.id === lastSession?.id)
+      if (!s) return false
+      s.seconds = Math.round(newSeconds)
+      s.endedAt = clockOf(Date.now())
+      return await writeSessions(lastSession.date, sessions)
+    } catch (e) {
+      console.error('[pomodoro] extend session failed:', e)
       return false
     }
   }
@@ -207,64 +263,119 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
     })
   }
 
-  function rollFocusDate() {
-    const t = todayStr()
-    if (focusDate.value !== t) {
-      focusDate.value = t
-      focusDone.value = 0
-    }
-  }
-
-  function beginPhase(p: PomodoroPhase) {
-    phase.value = p
+  // ---------- 状态机 ----------
+  function begin(stage_: 'focus' | 'break', seconds: number) {
+    stage.value = stage_
     phaseStartedAt.value = Date.now()
     now.value = Date.now()
-    endAt.value = now.value + phaseMinutes(mode.value, p) * 60_000
-    timerState.value = 'running'
+    totalSec.value = seconds
+    leftSec.value = seconds
+    deadline.value = now.value + seconds * 1000
+    paused.value = false
     ensureTicker()
     persist()
   }
 
-  /** 阶段自然结束时触发 */
+  function start() {
+    if (stage.value !== 'idle' || mirrored.value) return
+    unlockAudio()
+    begin('focus', curTag.value.min * 60)
+  }
+
+  function startRest() {
+    if (stage.value !== 'done' || mirrored.value) return
+    begin('break', REST_SEC)
+  }
+
+  /** 到点后的三选一之二：+5 分钟。把刚才那条记录的时长加长，🍅 不动 */
+  function addTime() {
+    if (stage.value !== 'done' || mirrored.value) return
+    extendedRound = true
+    totalSec.value += 300
+    leftSec.value += 300
+    deadline.value = Date.now() + leftSec.value * 1000
+    stage.value = 'focus'
+    paused.value = false
+    ensureTicker()
+    persist()
+  }
+
+  /** 阶段自然结束 */
   function complete() {
-    if (timerState.value !== 'running') return
-    if (phase.value === 'focus') {
-      const elapsed = durationMs.value
-      recordWithToast(elapsed / 1000, true, endAt.value)
-      rollFocusDate()
-      focusDone.value++
-      const next = breakAfterFocus(mode.value, focusDone.value)
-      const breakMin = phaseMinutes(mode.value, next)
+    if (stage.value !== 'focus' && stage.value !== 'break') return
+    if (stage.value === 'focus') {
+      if (extendedRound && lastSession) {
+        // 延续轮：原地改长那条记录，不再新记一条
+        void extendLastSession(totalSec.value).then(ok => {
+          if (!ok) toast('专注记录保存失败')
+        })
+      } else {
+        recordWithToast(totalSec.value, true, deadline.value)
+      }
+      stopTicker()
+      stage.value = 'done'
+      leftSec.value = 0
+      clearPersisted()
       playChime('focus')
       vibrate([200, 100, 200, 100, 300])
-      sendNotification('专注完成 🍅', `休息 ${breakMin} 分钟，回来继续第 ${focusDone.value + 1} 轮`)
-      toast(`专注完成，休息 ${breakMin} 分钟`)
-      beginPhase(next)
+      sendNotification('专注完成 🍅', '休息一下，或者再来 5 分钟')
     } else {
+      toIdle()
       playChime('break')
       vibrate([150, 100, 150])
-      sendNotification('休息结束 ☕', '准备好了就开始下一轮专注')
-      toast('休息结束，随时开始下一轮')
-      toIdle()
+      sendNotification('休息结束 ☕️', '准备好了就开始下一轮专注')
     }
   }
 
+  /** 提前结束：满 1 分钟记时长，但 🍅 +0（延续轮则改长原记录） */
+  function stop() {
+    if (stage.value !== 'focus' && stage.value !== 'break') return
+    if (stage.value === 'focus') {
+      const done = totalSec.value - leftSec.value
+      if (done >= MIN_RECORD_SEC) {
+        if (extendedRound && lastSession) {
+          void extendLastSession(done).then(ok => {
+            if (!ok) toast('专注记录保存失败')
+          })
+        } else {
+          recordWithToast(done, false)
+          toast(`已记录 ${Math.round(done / 60)} 分钟专注`)
+        }
+      }
+    }
+    toIdle()
+  }
+
   function toIdle() {
-    clearPersisted()
-    releaseLock()
-    idleLocal()
-  }
-
-  /** 回到待机但不触碰持久化/锁（镜像标签退出时用，避免清掉主标签的状态） */
-  function idleLocal() {
-    phase.value = 'focus'
-    timerState.value = 'idle'
-    endAt.value = 0
-    remainingMs.value = 0
     stopTicker()
+    releaseLock()
+    stage.value = 'idle'
+    paused.value = false
+    leftSec.value = 0
+    extendedRound = false
+    clearPersisted()
   }
 
-  // ---- 多标签互斥 ----
+  function pause() {
+    if (stage.value !== 'focus' && stage.value !== 'break') return
+    if (paused.value || mirrored.value) return
+    now.value = Date.now()
+    leftSec.value = Math.max(0, (deadline.value - now.value) / 1000)
+    paused.value = true
+    stopTicker()
+    persist()
+  }
+
+  function resume() {
+    if (!paused.value || mirrored.value) return
+    unlockAudio()
+    deadline.value = Date.now() + leftSec.value * 1000
+    paused.value = false
+    ensureTicker()
+    persist()
+  }
+
+  // ---------- 多标签互斥 ----------
 
   let lockHeld = false
   let releaseLockFn: (() => void) | undefined
@@ -273,7 +384,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
   function acquireLock(): Promise<boolean> {
     if (typeof navigator === 'undefined' || !navigator.locks?.request) return Promise.resolve(true)
     if (lockHeld) return Promise.resolve(true)
-    let grant: (ok: boolean) => void
+    let grant!: (ok: boolean) => void
     const granted = new Promise<boolean>(resolve => {
       grant = resolve
     })
@@ -284,8 +395,8 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         async lock => {
           if (!lock) return false
           lockHeld = true
-          grant!(true)
-          // 持锁直到释放（reset/跳过休息），Promise 悬着即锁不放手
+          grant(true)
+          // 持锁直到释放（reset/结束），Promise 悬着即锁不放手
           await new Promise<void>(resolve => {
             releaseLockFn = resolve
           })
@@ -293,7 +404,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
           return true
         }
       )
-      .catch(() => grant!(false))
+      .catch(() => grant(false))
     return granted
   }
 
@@ -325,18 +436,15 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
       }
       const s = JSON.parse(raw) as PersistedState
       if (!s || typeof s.endAt !== 'number') return
-      phase.value = s.phase
-      if (s.modeId && POMODORO_MODES.some(m => m.id === s.modeId)) modeId.value = s.modeId
-      endAt.value = s.endAt
-      remainingMs.value = s.remainingMs ?? 0
+      stage.value = s.phase
+      if (s.tagId && tags.value.some(t => t.id === s.tagId)) tagId.value = s.tagId
+      deadline.value = s.endAt
+      leftSec.value = (s.remainingMs ?? 0) / 1000
+      totalSec.value = totalSec.value || curTag.value.min * 60
       phaseStartedAt.value = s.phaseStartedAt
-      focusDate.value = s.focusDate
-      focusDone.value = s.focusDone ?? 0
-      todoId.value = s.todoId
-      todoText.value = s.todoText
-      timerState.value = s.state === 'running' ? 'running' : 'paused'
+      paused.value = s.state === 'paused'
       now.value = Date.now()
-      if (timerState.value === 'running') ensureTicker()
+      if (!paused.value) ensureTicker()
     } catch {}
   }
 
@@ -349,112 +457,35 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
     }
   }
 
-  async function start() {
-    if (timerState.value !== 'idle' || mirrored.value) return
-    if (!(await acquireLock())) {
-      becomeMirror()
-      return
-    }
-    unlockAudio()
-    void requestNotifyPermission()
-    rollFocusDate()
-    beginPhase('focus')
-  }
-
-  function pause() {
-    if (timerState.value !== 'running' || mirrored.value) return
-    now.value = Date.now()
-    remainingMs.value = Math.max(0, endAt.value - now.value)
-    timerState.value = 'paused'
+  function idleLocal() {
+    stage.value = 'idle'
+    paused.value = false
+    leftSec.value = 0
     stopTicker()
-    persist()
   }
 
-  async function resume() {
-    if (timerState.value !== 'paused' || mirrored.value) return
-    if (!(await acquireLock())) {
-      becomeMirror()
-      return
-    }
-    unlockAudio()
-    now.value = Date.now()
-    endAt.value = now.value + remainingMs.value
-    timerState.value = 'running'
-    ensureTicker()
-    persist()
-  }
-
-  /** 跳过当前阶段：专注阶段按实际时长补记（≥1 分钟）并计一轮，随后进入休息；休息阶段直接结束 */
-  function skip() {
-    if (timerState.value === 'idle' || mirrored.value) return
-    if (phase.value === 'focus') {
-      const elapsed =
-        timerState.value === 'running' ? durationMs.value - (endAt.value - Date.now()) : durationMs.value - remainingMs.value
-      const elapsedClamped = Math.max(0, Math.min(durationMs.value, elapsed))
-      rollFocusDate()
-      if (elapsedClamped >= MIN_RECORD_MS) {
-        recordWithToast(elapsedClamped / 1000, false)
-        toast(`已记录 ${Math.round(elapsedClamped / 60000)} 分钟专注`)
-        // 计入记录的专注算一轮，与自然完成/恢复补记的节奏一致
-        focusDone.value++
-      }
-      const next = breakAfterFocus(mode.value, focusDone.value)
-      beginPhase(next)
-    } else {
-      toIdle()
-    }
-  }
-
-  /** 重置计时器：专注进行中的时长不记录 */
-  function reset() {
-    if (timerState.value === 'idle' || mirrored.value) return
-    toIdle()
-    toast('已重置')
-  }
-
-  function selectMode(id: string) {
-    if (timerState.value !== 'idle' || mirrored.value) return
-    if (!POMODORO_MODES.some(m => m.id === id)) return
-    modeId.value = id
-    try {
-      localStorage.setItem(MODE_KEY, id)
-    } catch {}
-  }
-
-  function setTodo(id?: string, text?: string) {
-    if (mirrored.value) return
-    todoId.value = id
-    todoText.value = id ? text : undefined
-    if (timerState.value !== 'idle') persist()
-  }
-
-  /** 刷新后恢复计时：跨天重置轮次；关闭期间已结束的专注按整段补记 */
+  /** 刷新后恢复计时；关闭期间已结束的专注按整段补记（不进 done，直接 idle） */
   function restore() {
     try {
       const raw = localStorage.getItem(STATE_KEY)
       if (!raw) return
       const s = JSON.parse(raw) as PersistedState
       if (!s || typeof s.endAt !== 'number') return
-      if (s.modeId && POMODORO_MODES.some(m => m.id === s.modeId)) modeId.value = s.modeId
-      if (s.focusDate === todayStr() && typeof s.focusDone === 'number') {
-        focusDate.value = s.focusDate
-        focusDone.value = s.focusDone
-      }
+      if (s.tagId && tags.value.some(t => t.id === s.tagId)) tagId.value = s.tagId
       if (s.state === 'paused' && (s.remainingMs ?? 0) > 0) {
-        phase.value = s.phase
-        remainingMs.value = s.remainingMs!
+        stage.value = s.phase
+        leftSec.value = s.remainingMs! / 1000
+        totalSec.value = Math.max(leftSec.value, curTag.value.min * 60)
         phaseStartedAt.value = s.phaseStartedAt
-        todoId.value = s.todoId
-        todoText.value = s.todoText
-        timerState.value = 'paused'
+        paused.value = true
         persist()
       } else if (s.state === 'running' && s.endAt > Date.now()) {
-        phase.value = s.phase
-        endAt.value = s.endAt
+        stage.value = s.phase
+        deadline.value = s.endAt
+        totalSec.value = Math.max((s.endAt - s.phaseStartedAt) / 1000, curTag.value.min * 60)
+        leftSec.value = (s.endAt - Date.now()) / 1000
         phaseStartedAt.value = s.phaseStartedAt
-        todoId.value = s.todoId
-        todoText.value = s.todoText
-        timerState.value = 'running'
+        paused.value = false
         now.value = Date.now()
         // 其他标签页持有计时锁时转入镜像展示，否则本标签接管续跑
         void acquireLock().then(ok => {
@@ -466,17 +497,13 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         })
       } else if (s.state === 'running' && s.phase === 'focus' && s.endAt <= Date.now()) {
         // 闭页期间已自然结束：按整段补记一次，随后清掉持久化状态，
-        // 否则每次加载都会重复补记同一段专注（H1）
+        // 否则每次加载都会重复补记同一段专注
         phaseStartedAt.value = s.phaseStartedAt
-        todoId.value = s.todoId
-        todoText.value = s.todoText
-        const plannedSec = phaseMinutes(modeById(s.modeId), 'focus') * 60
-        void recordFocusSession(plannedSec, true, s.endAt).then(ok => {
+        totalSec.value = curTag.value.min * 60
+        void recordFocusSession(totalSec.value, true, s.endAt).then(ok => {
           clearPersisted()
           if (!ok) toast('专注记录保存失败')
         })
-        rollFocusDate()
-        focusDone.value++
       }
     } catch {}
   }
@@ -486,25 +513,23 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
   installAudioUnlock()
 
   return {
-    modeId,
-    mode,
-    phase,
-    timerState,
-    focusDone,
+    tags,
+    tagId,
+    curTag,
+    stage,
+    paused,
     mirrored,
-    todoId,
-    todoText,
-    isFocus,
-    remainingMsNow,
-    progress,
+    totalSec,
+    leftSec,
     clock,
-    roundLabel,
+    progressFrac,
+    addTag,
+    selectTag,
     start,
     pause,
     resume,
-    skip,
-    reset,
-    selectMode,
-    setTodo,
+    stop,
+    startRest,
+    addTime,
   }
 })

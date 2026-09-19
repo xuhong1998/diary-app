@@ -1,0 +1,65 @@
+/* glass-app.css —— 应用专属补丁：登录页 / 日记条目编辑弹层
+   设计稿没有这两块，用同一套变量与玻璃语言补齐，不引入旧 ios-* 类 */
+
+/* ==================== 登录页（route.meta.public，独立于 .screen 骨架） ==================== */
+.login-page{
+  min-height:100dvh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px 24px;text-align:center;
+  background:var(--bg);color:var(--text);position:relative;isolation:isolate;
+}
+.login-page::before{
+  content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(48% 34% at 18% 8%,  rgba(120,140,255,.34), transparent 70%),
+    radial-gradient(42% 30% at 88% 22%, rgba(255,120,190,.24), transparent 72%),
+    radial-gradient(56% 40% at 62% 96%, rgba(90,220,220,.24), transparent 74%);
+  filter:blur(28px);
+}
+.login-page > *{position:relative;z-index:1}
+.login-title{font-size:31px;font-weight:800;letter-spacing:-.9px;margin-top:18px}
+.login-subtitle{font-size:15px;font-weight:500;color:var(--text-2);margin-top:10px;line-height:1.7}
+.login-btn-wrap{width:100%;max-width:320px;margin-top:34px}
+.login-btn{
+  width:100%;height:50px;border:0;border-radius:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-family:inherit;font-size:16px;font-weight:700;color:#fff;
+  background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 40%,transparent);
+  transition:transform .16s ease;
+}
+.login-btn:active{transform:scale(.975)}
+.login-tip{
+  margin-top:26px;font-size:12.5px;line-height:1.75;color:var(--text-3);font-weight:500;
+}
+.login-tip code{
+  font-family:ui-monospace,Menlo,monospace;font-size:11.5px;
+  background:color-mix(in srgb,var(--text) 8%,transparent);
+  padding:1px 5px;border-radius:5px;
+}
+
+/* ==================== 日记条目 · 编辑弹层 ====================
+   设计稿未给条目级编辑交互；这里用待办新建弹层的同款语言补齐 */
+.entry-sheet{min-height:0;max-height:80%}
+.entry-input{
+  display:flex;align-items:center;gap:10px;flex:none;
+  padding:6px 15px;border-radius:var(--radius);
+  background-color:color-mix(in srgb,var(--text) 6%,transparent);
+  box-shadow:inset 0 0 0 .5px var(--divider);
+}
+.entry-input.time{
+  flex:none;width:86px;padding:13px 0;justify-content:center;
+}
+.entry-input input{
+  width:100%;border:0;background:none;font-family:inherit;
+  font-size:16px;font-weight:500;color:var(--text);outline:none;
+}
+.entry-input input::placeholder{color:var(--text-3)}
+.entry-del{
+  margin-top:16px;width:100%;height:46px;flex:none;
+  border:0;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:700;color:#ff453a;
+  background:color-mix(in srgb,#ff453a 10%,transparent);
+  transition:transform .16s ease,background .2s ease;
+}
+.entry-del:active{transform:scale(.975);background:color-mix(in srgb,#ff453a 18%,transparent)}

@@ -1,15 +1,10 @@
-@import './tokens.css';
-@import './base.css';
-@import './nav.css';
-@import './ui.css';
-@import './drawer.css';
-@import './diary.css';
-@import './algorithm.css';
-@import './sheet.css';
-@import './interview.css';
-@import './todo.css';
-@import './checkin.css';
-@import './pomodoro.css';
-@import './login.css';
-@import './search.css';
-@import './feedback.css';
+/* main.css —— 样式入口。顺序即层叠顺序，与设计稿 <link> 顺序一致，不要调换 */
+@import './glass-base.css';
+@import './glass-diary.css';
+@import './glass-calendar.css';
+@import './glass-todo.css';
+@import './glass-pomodoro.css';
+@import './glass-more.css';
+@import './glass-shell.css';
+@import './glass-overlays.css';
+@import './glass-app.css';

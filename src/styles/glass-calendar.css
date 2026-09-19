@@ -1,0 +1,92 @@
+/* calendar.css —— 日历浮层：选日期 / 看记录密度 */
+
+/* ==================== 浮层 ==================== */
+/* 玻璃要有东西可折射。scrim 比「快速记一笔」更轻，
+   让底下的时间线隐约透出来，卡片才不是一块死白 */
+.cal-backdrop{
+  background:rgba(8,10,18,.26);
+  -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);
+}
+
+/* 日历是定高的，不套 .sheet 那套自适应高度 */
+#calSheet{
+  min-height:0;max-height:none;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom,18px));
+}
+
+.cal-head{padding:10px 0 2px}
+.cal-head .title{
+  font-size:16px;font-weight:750;letter-spacing:-.2px;
+  font-variant-numeric:tabular-nums;
+}
+.cal-nav{
+  width:34px;height:34px;border:0;border-radius:50%;background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);font-family:inherit;
+  transition:background .16s ease,opacity .22s ease,transform .16s ease;
+}
+.cal-nav svg{width:19px;height:19px;display:block}
+.cal-nav:active{transform:scale(.88)}
+.cal-nav:disabled{opacity:.22;pointer-events:none}
+#calPrev{justify-self:start}
+#calNext{justify-self:end}
+
+.cal-week{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  padding:8px 0 2px;text-align:center;
+  font-size:11.5px;font-weight:650;letter-spacing:.3px;color:var(--text-3);
+}
+
+/* ==================== 网格 ==================== */
+.cal-wrap{overflow:hidden;padding-bottom:4px}   /* 换月时新网格从这一格里滑进来 */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+
+/* 前后月的空白格。刻意不画淡色日期 —— 这个日历要回答的是「写过哪几天」，
+   多出来的数字是噪音，会把青点的疏密冲淡 */
+.cal-blank{height:46px}
+
+.cal-d{
+  height:46px;padding:0;border:0;background:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:inherit;color:var(--text-2);
+}
+.cal-d .n{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:500;letter-spacing:-.2px;
+  font-variant-numeric:tabular-nums;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),
+             background .2s ease,color .2s ease;
+}
+/* 青点的位置恒定占着，有记录 / 没记录的日子数字基线才一致 */
+.cal-d .dot{
+  width:4px;height:4px;border-radius:50%;margin-top:2px;
+  background:transparent;transition:background .2s ease;
+}
+.cal-d:active .n{transform:scale(.88)}
+
+/* 写过的日子「更实」：字重加一档 + 一颗青点。
+   扫一眼过去就有疏密，这比任何统计数字都直观 */
+.cal-d.has{color:var(--text)}
+.cal-d.has .n{font-weight:700}
+.cal-d.has .dot{background:var(--accent)}
+
+/* 今天：淡青圆底 + 青字，和选中的实心圆区分开 */
+.cal-d.today .n{
+  color:var(--accent);font-weight:750;
+  background:color-mix(in srgb,var(--accent) 13%,transparent);
+}
+
+/* 还没到的日子：压淡、不可点。不弹提示，不给理由 */
+.cal-d.off{color:var(--text-3);opacity:.3;pointer-events:none}
+
+/* 选中：青色实心圆。从中心弹出来 —— 每次打开日历它会「落」在当前这天，
+   相当于一句「你在这儿」 */
+.cal-d.sel .n{
+  background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  color:#fff;font-weight:750;
+  box-shadow:0 5px 14px color-mix(in srgb,var(--accent) 38%,transparent);
+  animation:calpop .34s cubic-bezier(.34,1.56,.64,1);
+}
+.cal-d.sel .dot{background:transparent}
+@keyframes calpop{ from{transform:scale(.72)} to{transform:scale(1)} }
