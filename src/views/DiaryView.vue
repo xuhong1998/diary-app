@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useDiaryStore } from '@/stores/diary'
 import { openCalendar, openReflectEditor } from '@/shell/bus'
-import { labelOfDate, subOfDate, todayStr, normalizeTime, nowTime } from '@/utils/date'
+import { labelOfDate, subOfDate, todayStr, normalizeTime } from '@/utils/date'
 import { ensureRichText, previewOf } from '@/utils/richText'
 import { fetchWeatherData, getCachedWeather, type WeatherData } from '@/utils/weather'
 import { toast } from '@/utils/toast'
@@ -79,14 +79,26 @@ function gestureFor(id: string) {
 const onEntryDown = (e: PointerEvent, id: string) => gestureFor(id).down(e)
 const onEntryMove = (e: PointerEvent, id: string) => gestureFor(id).move(e)
 const onEntryCancel = (id: string) => gestureFor(id).cancel()
-const onEntryUp = (id: string) => gestureFor(id).up()
 
-function onMenuEdit() {
-  const r = store.entry?.records.find(x => x.id === menuTargetId)
+/** 抬起：长按已弹菜单则吞掉这次点击；普通点按 = 直接编辑这条 */
+function onEntryUp(_e: PointerEvent, id: string) {
+  if (gestureFor(id).up()) return
+  openEntryEdit(id)
+}
+
+function openEntryEdit(id: string) {
+  const r = store.entry?.records.find(x => x.id === id)
   if (!r) return
+  menuTargetId = id
   editTime.value = r.time
   editText.value = r.text
   entrySheetOpen.value = true
+  nextTick(() => setTimeout(() => editTextInputEl.value?.focus(), 340))
+}
+
+function onMenuEdit() {
+  if (!menuTargetId) return
+  openEntryEdit(menuTargetId)
 }
 
 async function onMenuDel() {
@@ -117,13 +129,12 @@ async function undoDelete() {
 const entrySheetOpen = ref(false)
 const editTime = ref('')
 const editText = ref('')
+const editTextInputEl = ref<HTMLInputElement | null>(null)
 
 async function saveEntry() {
   if (!menuTargetId || !editText.value.trim()) return
-  await store.updateRecord(menuTargetId, {
-    time: normalizeTime(editTime.value || nowTime()),
-    text: editText.value,
-  })
+  const time = editTime.value.trim() ? normalizeTime(editTime.value) : undefined
+  await store.updateRecord(menuTargetId, time ? { time, text: editText.value } : { text: editText.value })
   entrySheetOpen.value = false
   toast('已保存')
 }
@@ -202,7 +213,7 @@ onMounted(() => {
           class="entry"
           @pointerdown="onEntryDown($event, r.id)"
           @pointermove="onEntryMove($event, r.id)"
-          @pointerup="onEntryUp(r.id)"
+          @pointerup="onEntryUp($event, r.id)"
           @pointercancel="onEntryCancel(r.id)"
           @contextmenu.prevent
         >
@@ -245,10 +256,10 @@ onMounted(() => {
         <span></span>
       </div>
       <div class="entry-input time field-input">
-        <input v-model="editTime" placeholder="HH:MM" @blur="editTime = normalizeTime(editTime)" />
+        <input v-model="editTime" placeholder="HH:MM" @blur="editTime = editTime.trim() ? normalizeTime(editTime) : editTime" />
       </div>
       <div class="entry-input" style="margin-top: 10px">
-        <input v-model="editText" placeholder="内容" @keydown.enter="saveEntry" />
+        <input ref="editTextInputEl" v-model="editText" placeholder="内容" @keydown.enter="saveEntry" />
       </div>
       <button class="save" style="margin-top: 18px" @click="saveEntry">保存</button>
       <button class="entry-del" @click="deleteEntry">删除这条记录</button>

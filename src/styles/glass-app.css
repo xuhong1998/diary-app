@@ -1,6 +1,13 @@
 /* glass-app.css —— 应用专属补丁：登录页 / 日记条目编辑弹层
    设计稿没有这两块，用同一套变量与玻璃语言补齐，不引入旧 ios-* 类 */
 
+/* ==================== 日记条目交互补丁 ====================
+   设计稿未定义条目交互（点按=编辑、长按=菜单），长按按住时不要选中文字 */
+[data-page="diary"] .entry{
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;
+}
+
 /* ==================== 登录页（route.meta.public，独立于 .screen 骨架） ==================== */
 .login-page{
   min-height:100dvh;display:flex;flex-direction:column;
