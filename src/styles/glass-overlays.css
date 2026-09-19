@@ -55,6 +55,8 @@
   padding:3px 9px;border-radius:8px;margin-top:2px;
   font-variant-numeric:tabular-nums;letter-spacing:.2px;
   transition:background .2s ease,color .2s ease;
+  /* 纯展示元素：不接收指针，点击穿透让光标总能落进文字（contenteditable=false 会卡光标） */
+  pointer-events:none;
 }
 .badge.time{
   color:var(--accent);

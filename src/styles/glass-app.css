@@ -8,6 +8,10 @@
   -webkit-user-select:none;user-select:none;
 }
 
+/* ==================== 记一笔 · 头部按钮位 ====================
+   设计稿取消在左；按 iOS 习惯挪到右侧关闭位（其余弹层维持设计稿不动） */
+.qn-sheet .sheet-head .cancel{justify-self:end}
+
 /* ==================== 登录页（route.meta.public，独立于 .screen 骨架） ==================== */
 .login-page{
   min-height:100dvh;display:flex;flex-direction:column;

@@ -44,7 +44,8 @@ function renderLine(raw: string): string {
   const badge = p.time
     ? '<span class="badge time" data-raw="' + p.time + '" contenteditable="false">' + p.time + '</span>'
     : '<span class="badge now" contenteditable="false">现在</span>'
-  return '<div class="line">' + badge + '<span class="txt">' + esc(p.rest) + '</span></div>'
+  // 空行要放 <br>：.txt 是 flex item，Chromium 会丢弃空节点内的光标（表现为打不了字）
+  return '<div class="line">' + badge + '<span class="txt">' + (p.rest ? esc(p.rest) : '<br>') + '</span></div>'
 }
 
 /** 从 DOM 还原纯文本——徽章里的时间要拼回去，否则重绘时会被吃掉 */
@@ -124,6 +125,15 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+/** 点到徽章 / 行空白 / 编辑器空白：光标兜底落回最后一行行尾。
+ *  徽章是 contenteditable=false，直接点它浏览器放不进光标（iOS 上表现为「打不了字」） */
+function onEditorClick(e: MouseEvent) {
+  const t = e.target as HTMLElement | null
+  if (t?.closest('.txt')) return
+  editorEl.value?.focus()
+  caretToEnd()
+}
+
 /** 粘贴多行：按行追加，对应「批量录入」场景 */
 function onPaste(e: ClipboardEvent) {
   e.preventDefault()
@@ -140,6 +150,10 @@ function onPaste(e: ClipboardEvent) {
 
 function open() {
   paint(draft)
+  // 立刻聚焦一次：此刻还在点「＋」的用户激活窗口内（iOS 对异步 focus 不弹键盘）；
+  // 弹层动画走完再补一次，兼顾桌面与动画后才可点的场景
+  editorEl.value?.focus()
+  caretToEnd()
   nextTick(() => {
     setTimeout(() => {
       editorEl.value?.focus()
@@ -186,12 +200,12 @@ defineExpose({ close, save })
 <template>
   <div ref="backdropEl" class="backdrop" :class="{ show: quickNoteOpen }" @click="close"></div>
 
-  <div ref="sheetEl" class="sheet glass" :class="{ show: quickNoteOpen }" role="dialog" aria-label="快速记一笔">
+  <div ref="sheetEl" class="sheet glass qn-sheet" :class="{ show: quickNoteOpen }" role="dialog" aria-label="快速记一笔">
     <div class="sheet-grip"></div>
     <div class="sheet-head">
-      <button class="cancel" @click="close">取消</button>
-      <span class="title">记一笔</span>
       <span></span>
+      <span class="title">记一笔</span>
+      <button class="cancel" @click="close">取消</button>
     </div>
     <div
       ref="editorEl"
@@ -203,6 +217,7 @@ defineExpose({ close, save })
       @compositionend="onCompositionEnd"
       @keydown="onKeydown"
       @paste="onPaste"
+      @click="onEditorClick"
     ></div>
     <div class="sheet-foot">
       <button class="save" @click="save">保存</button>
